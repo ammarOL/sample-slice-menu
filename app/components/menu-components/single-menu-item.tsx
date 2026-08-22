@@ -7,12 +7,14 @@ export default function SingleMenuItem({
   itemName,
   itemDescription,
   itemPrice,
+  quantity,
   alterQtyFunction,
 }: {
   itemId: string;
   itemName: string;
   itemDescription: string;
   itemPrice: number;
+  quantity: number;
   alterQtyFunction: (
     itemId: string,
     name: string,
@@ -44,10 +46,10 @@ export default function SingleMenuItem({
         <div>
           <div>₹{itemPrice}</div>
           <div className="border px-3 py-1 text-center">
-            {qty > 0 ? (
+            {quantity > 0 ? (
               <div className="flex gap-3 justify-center">
                 <div onClick={handleQtyReduce}>-</div>
-                <div>{qty}</div>
+                <div>{quantity}</div>
                 <div onClick={handleQtyAdd}>+</div>{" "}
               </div>
             ) : (

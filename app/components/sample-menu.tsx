@@ -13,17 +13,22 @@ export default function SampleMenu() {
   const [orderList, setOrderList] = useState<Record<string, OrderItem>>({});
   const [total, setTotal] = useState(0);
 
+  function handleClearCart() {
+    // functionality for clearing the whole cart
+    setOrderList({});
+  }
+
   function alterQtyFunction(
     itemId: string,
     name: string,
-    count: number,
     price: number,
+    count: number,
   ) {
     setOrderList((prev: any) => ({
       ...prev,
       [itemId]: {
-        name,
-        price,
+        name: name,
+        price: price,
         quantity: count,
       },
     }));
@@ -53,6 +58,7 @@ export default function SampleMenu() {
           itemName="garlic bread"
           itemDescription="fresh baked bread with garlic and cheese toppings."
           itemPrice={300}
+          quantity={orderList["1"]?.quantity ?? 0}
           alterQtyFunction={alterQtyFunction}
         />
         <SingleMenuItem
@@ -60,6 +66,7 @@ export default function SampleMenu() {
           itemName="garlic bread"
           itemDescription="fresh baked bread with garlic and cheese toppings."
           itemPrice={300}
+          quantity={orderList["2"]?.quantity ?? 0}
           alterQtyFunction={alterQtyFunction}
         />
         <SingleMenuItem
@@ -67,14 +74,18 @@ export default function SampleMenu() {
           itemName="garlic bread"
           itemDescription="fresh baked bread with garlic and cheese toppings."
           itemPrice={300}
+          quantity={orderList["3"]?.quantity ?? 0}
           alterQtyFunction={alterQtyFunction}
         />
       </div>
 
-      <div>
-        <div>total price: {total}</div>
-        <Link href="/checkout">Checkout</Link>
-      </div>
+      {total !== 0 && (
+        <div>
+          <div>total price: {total}</div>
+          <Link href="/checkout">Checkout</Link>
+          <div onClick={handleClearCart}>clear all</div>
+        </div>
+      )}
     </div>
   );
 }
