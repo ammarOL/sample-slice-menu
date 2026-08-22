@@ -1,7 +1,25 @@
 "use client";
 import { useState } from "react";
+import { useEffect } from "react";
 
-export default function SingleMenuItem() {
+export default function SingleMenuItem({
+  itemId,
+  itemName,
+  itemDescription,
+  itemPrice,
+  alterQtyFunction,
+}: {
+  itemId: string;
+  itemName: string;
+  itemDescription: string;
+  itemPrice: number;
+  alterQtyFunction: (
+    itemId: string,
+    name: string,
+    price: number,
+    count: number,
+  ) => void;
+}) {
   const [qty, setQty] = useState(0);
 
   function handleQtyReduce() {
@@ -11,16 +29,20 @@ export default function SingleMenuItem() {
   function handleQtyAdd() {
     setQty((prev) => prev + 1);
   }
+
+  useEffect(() => {
+    alterQtyFunction(itemId, itemName, itemPrice, qty);
+  }, [qty]);
   // add the menu item component right here.
   return (
     <div>
       <div className="flex justify-between border px-2 py-2">
         <div>
-          <div>Affogato</div>
-          <div>Coffee topped with ice-cream, a true italian delight.</div>
+          <div>{itemName}</div>
+          <div>{itemDescription}</div>
         </div>
         <div>
-          <div>Item Picture (if exists)</div>
+          <div>₹{itemPrice}</div>
           <div className="border px-3 py-1 text-center">
             {qty > 0 ? (
               <div className="flex gap-3 justify-center">
