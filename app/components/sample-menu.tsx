@@ -10,6 +10,7 @@ type OrderItem = {
 
 export default function SampleMenu() {
   const [orderList, setOrderList] = useState<Record<string, OrderItem>>({});
+  const [total, setTotal] = useState(0);
 
   function alterQtyFunction(
     itemId: string,
@@ -22,10 +23,18 @@ export default function SampleMenu() {
       [itemId]: {
         name,
         price,
-        count,
+        quantity: count,
       },
     }));
   }
+
+  useEffect(() => {
+    const total = Object.values(orderList).reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    );
+    setTotal(total);
+  }, [orderList]);
 
   useEffect(() => {
     console.log("Here's the modified orderlist", orderList);
@@ -60,6 +69,8 @@ export default function SampleMenu() {
           alterQtyFunction={alterQtyFunction}
         />
       </div>
+
+      <div>total price: {total}</div>
     </div>
   );
 }
