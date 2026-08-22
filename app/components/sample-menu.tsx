@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import SingleMenuItem from "./menu-components/single-menu-item";
+import Link from "next/link";
 
 type OrderItem = {
   name: string;
@@ -70,7 +71,10 @@ export default function SampleMenu() {
         />
       </div>
 
-      <div>total price: {total}</div>
+      <div>
+        <div>total price: {total}</div>
+        <Link href="/checkout">Checkout</Link>
+      </div>
     </div>
   );
 }
