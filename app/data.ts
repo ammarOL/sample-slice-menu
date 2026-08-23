@@ -5,6 +5,7 @@ export type MenuItem = {
   price: number;
   category: string;
   isVegetarian: boolean;
+  imageUrl: string;
 };
 
 export const menuItems: MenuItem[] = [
@@ -15,6 +16,8 @@ export const menuItems: MenuItem[] = [
     price: 300,
     category: "Breads & Sides",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "2",
@@ -23,6 +26,8 @@ export const menuItems: MenuItem[] = [
     price: 450,
     category: "Pizzas",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "3",
@@ -31,6 +36,8 @@ export const menuItems: MenuItem[] = [
     price: 380,
     category: "Mains",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "4",
@@ -39,6 +46,8 @@ export const menuItems: MenuItem[] = [
     price: 420,
     category: "Pasta",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "5",
@@ -47,6 +56,8 @@ export const menuItems: MenuItem[] = [
     price: 220,
     category: "Coffee",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "6",
@@ -55,6 +66,8 @@ export const menuItems: MenuItem[] = [
     price: 250,
     category: "Coffee",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "7",
@@ -63,6 +76,8 @@ export const menuItems: MenuItem[] = [
     price: 280,
     category: "Desserts",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=320&q=80",
   },
   {
     id: "8",
@@ -71,5 +86,7 @@ export const menuItems: MenuItem[] = [
     price: 320,
     category: "Desserts",
     isVegetarian: true,
+    imageUrl:
+      "https://images.unsplash.com/photo-1567171466295-4afa63d4b1d4?auto=format&fit=crop&w=320&q=80",
   },
 ];

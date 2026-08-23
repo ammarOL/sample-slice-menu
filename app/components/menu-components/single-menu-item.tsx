@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 
 export default function SingleMenuItem({
   itemId,
@@ -6,6 +7,7 @@ export default function SingleMenuItem({
   itemDescription,
   itemPrice,
   isVegetarian,
+  imageUrl,
   quantity,
   alterQtyFunction,
 }: {
@@ -14,6 +16,7 @@ export default function SingleMenuItem({
   itemDescription: string;
   itemPrice: number;
   isVegetarian: boolean;
+  imageUrl: string;
   quantity: number;
   alterQtyFunction: (
     itemId: string,
@@ -44,11 +47,22 @@ export default function SingleMenuItem({
         <p className="mt-1 text-sm leading-5 text-stone-700">
           {itemDescription}
         </p>
+        <p className="mt-2 text-sm font-semibold text-stone-950">
+          ₹{itemPrice}
+        </p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-3">
-        <div className="text-sm font-semibold text-stone-950">₹{itemPrice}</div>
-        <div className="min-w-24 rounded-md border border-stone-300 bg-white text-center text-sm font-semibold">
+      <div className="w-24 shrink-0">
+        <div className="relative aspect-square overflow-hidden rounded-md bg-stone-100">
+          <Image
+            src={imageUrl}
+            alt={itemName}
+            fill
+            sizes="96px"
+            className="object-cover"
+          />
+        </div>
+        <div className="mt-2 min-w-24 rounded-md border border-stone-300 bg-white text-center text-sm font-semibold">
           {quantity > 0 ? (
             <div className="grid grid-cols-3 items-center">
               <button

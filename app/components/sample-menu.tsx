@@ -91,6 +91,7 @@ export default function SampleMenu() {
                     itemDescription={each.description}
                     itemPrice={each.price}
                     isVegetarian={each.isVegetarian}
+                    imageUrl={each.imageUrl}
                     quantity={orderList[each.id]?.quantity ?? 0}
                     alterQtyFunction={setItemQuantity}
                   />
@@ -101,8 +102,8 @@ export default function SampleMenu() {
         </div>
 
         {total !== 0 && (
-          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white px-4 py-3 shadow-sm sm:px-6">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+          <div className="fixed inset-x-0 bottom-0 z-20 px-4 pb-3 sm:px-6">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white px-4 py-3 shadow-[0_-8px_20px_rgba(28,25,23,0.14)] sm:px-6">
               <div>
                 <div className="text-xs text-stone-600">
                   {itemCount} {itemCount === 1 ? "item" : "items"}
