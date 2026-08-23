@@ -55,13 +55,37 @@ export default function Checkout() {
                   <div>
                     <h2 className="font-semibold">{item.name}</h2>
                     <p className="mt-1 text-sm text-stone-700">
-                      {item.quantity} × ₹{item.price}
+                      {item.quantity} × ₹
+                      {item.price +
+                        item.customizations.reduce(
+                          (sum, customization) => sum + customization.price,
+                          0,
+                        )}
                     </p>
+                    {item.customizations.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-stone-600">
+                          Customizations
+                        </p>
+                        <ul className="mt-1 list-disc pl-4 text-xs text-stone-700">
+                          {item.customizations.map((customization) => (
+                            <li key={customization.id}>
+                              {customization.name} (+₹{customization.price})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-stone-600">Item total</p>
                     <p className="mt-1 font-semibold tabular-nums">
-                      ₹{item.price * item.quantity}
+                      ₹
+                      {(item.price +
+                        item.customizations.reduce(
+                          (sum, customization) => sum + customization.price,
+                          0,
+                        )) * item.quantity}
                     </p>
                   </div>
                 </article>

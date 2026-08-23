@@ -7,6 +7,11 @@ export type MenuItem = {
   isVegetarian: boolean;
   isBestseller: boolean;
   imageUrl: string;
+  customizationOptions?: {
+    id: string;
+    name: string;
+    price: number;
+  }[];
 };
 
 export const menuItems: MenuItem[] = [
@@ -31,6 +36,11 @@ export const menuItems: MenuItem[] = [
     isBestseller: true,
     imageUrl:
       "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=320&q=80",
+    customizationOptions: [
+      { id: "extra-cheese", name: "Extra cheese", price: 50 },
+      { id: "jalapenos", name: "Jalapenos", price: 30 },
+      { id: "mushrooms", name: "Mushrooms", price: 40 },
+    ],
   },
   {
     id: "3",

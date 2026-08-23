@@ -11,9 +11,17 @@ import type { ReactNode } from "react";
 
 export type OrderItem = {
   id: string;
+  menuItemId: string;
   name: string;
   price: number;
   quantity: number;
+  customizations: CustomizationOption[];
+};
+
+export type CustomizationOption = {
+  id: string;
+  name: string;
+  price: number;
 };
 
 type OrderContextValue = {
@@ -21,12 +29,15 @@ type OrderContextValue = {
   orderList: Record<string, OrderItem>;
   total: number;
   itemCount: number;
-  setItemQuantity: (
+  addItem: (
     itemId: string,
     name: string,
     price: number,
-    quantity: number,
+    customizations?: CustomizationOption[],
   ) => void;
+  removeItem: (menuItemId: string) => void;
+  getItemQuantity: (menuItemId: string) => number;
+  getLastCustomizations: (menuItemId: string) => CustomizationOption[];
   clearOrder: () => void;
 };
 
@@ -35,27 +46,82 @@ const OrderContext = createContext<OrderContextValue | null>(null);
 export function OrderProvider({ children }: { children: ReactNode }) {
   const [orderList, setOrderList] = useState<Record<string, OrderItem>>({});
 
-  const setItemQuantity = useCallback(
-    (itemId: string, name: string, price: number, quantity: number) => {
+  const addItem = useCallback(
+    (
+      itemId: string,
+      name: string,
+      price: number,
+      customizations: CustomizationOption[] = [],
+    ) => {
       setOrderList((previousOrder) => {
         const nextOrder = { ...previousOrder };
+        const sortedCustomizations = [...customizations].sort((a, b) =>
+          a.id.localeCompare(b.id),
+        );
+        const lineId = `${itemId}-${
+          sortedCustomizations.map((option) => option.id).join("-") || "plain"
+        }`;
+        const existingItem = nextOrder[lineId];
 
-        if (quantity <= 0) {
-          delete nextOrder[itemId];
-          return nextOrder;
+        if (existingItem) {
+          nextOrder[lineId] = {
+            ...existingItem,
+            quantity: existingItem.quantity + 1,
+          };
+        } else {
+          nextOrder[lineId] = {
+            id: lineId,
+            menuItemId: itemId,
+            name,
+            price,
+            quantity: 1,
+            customizations: sortedCustomizations,
+          };
         }
-
-        nextOrder[itemId] = {
-          id: itemId,
-          name,
-          price,
-          quantity,
-        };
 
         return nextOrder;
       });
     },
     [],
+  );
+
+  const removeItem = useCallback((menuItemId: string) => {
+    setOrderList((previousOrder) => {
+      const nextOrder = { ...previousOrder };
+      const matchingItems = Object.entries(nextOrder).filter(
+        ([, item]) => item.menuItemId === menuItemId,
+      );
+      const lastItem = matchingItems[matchingItems.length - 1];
+
+      if (!lastItem) return nextOrder;
+
+      const [lineId, item] = lastItem;
+      if (item.quantity === 1) {
+        delete nextOrder[lineId];
+      } else {
+        nextOrder[lineId] = { ...item, quantity: item.quantity - 1 };
+      }
+
+      return nextOrder;
+    });
+  }, []);
+
+  const getItemQuantity = useCallback(
+    (menuItemId: string) =>
+      Object.values(orderList)
+        .filter((item) => item.menuItemId === menuItemId)
+        .reduce((sum, item) => sum + item.quantity, 0),
+    [orderList],
+  );
+
+  const getLastCustomizations = useCallback(
+    (menuItemId: string) => {
+      const matchingItems = Object.values(orderList).filter(
+        (item) => item.menuItemId === menuItemId,
+      );
+      return matchingItems[matchingItems.length - 1]?.customizations ?? [];
+    },
+    [orderList],
   );
 
   const clearOrder = useCallback(() => {
@@ -65,7 +131,15 @@ export function OrderProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const orderItems = Object.values(orderList);
     const total = orderItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
+      (sum, item) =>
+        sum +
+        (item.price +
+          item.customizations.reduce(
+            (customizationTotal, customization) =>
+              customizationTotal + customization.price,
+            0,
+          )) *
+          item.quantity,
       0,
     );
     const itemCount = orderItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -75,10 +149,20 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       orderList,
       total,
       itemCount,
-      setItemQuantity,
+      addItem,
+      removeItem,
+      getItemQuantity,
+      getLastCustomizations,
       clearOrder,
     };
-  }, [clearOrder, orderList, setItemQuantity]);
+  }, [
+    addItem,
+    clearOrder,
+    getItemQuantity,
+    getLastCustomizations,
+    orderList,
+    removeItem,
+  ]);
 
   return (
     <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
