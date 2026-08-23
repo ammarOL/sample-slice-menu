@@ -81,6 +81,23 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       if (savedOrderList) setOrders(savedOrderList);
       setHydrated(true);
     });
+
+    function handleStorageChange(event: StorageEvent) {
+      if (event.key !== ORDERS_STORAGE_KEY) return;
+
+      try {
+        const parsedOrders = event.newValue
+          ? (JSON.parse(event.newValue) as PlacedOrder[])
+          : [];
+
+        if (Array.isArray(parsedOrders)) setOrders(parsedOrders);
+      } catch {
+        // Ignore malformed updates from browser storage.
+      }
+    }
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   useEffect(() => {

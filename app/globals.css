@@ -4,3 +4,60 @@
   --font-inter: var(--font-inter);
   --font-garamond: var(--font-eb-garamond);
 }
+
+@keyframes order-success-panel {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes order-success-mark {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes order-success-check {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+.order-success-panel {
+  animation: order-success-panel 420ms ease-out both;
+}
+
+.order-success-mark {
+  animation: order-success-mark 480ms cubic-bezier(0.25, 1, 0.5, 1) 80ms both;
+}
+
+.order-success-check {
+  animation: order-success-check 280ms ease-out 220ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-success-panel,
+  .order-success-mark,
+  .order-success-check {
+    animation: none;
+  }
+}

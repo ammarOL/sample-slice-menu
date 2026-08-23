@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {
-    root: "/home/ammar/airmenus-slice/frontend",
+    root: process.cwd(),
   },
 };
 
