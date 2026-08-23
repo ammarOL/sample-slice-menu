@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { menuItems } from "../data";
 import { useOrder } from "../order-context/order-context";
+
+const customizationOptionsById = new Map(
+  menuItems
+    .flatMap((item) => item.customizationOptions ?? [])
+    .map((option) => [option.id, option]),
+);
 
 export default function Checkout() {
   const { clearOrder, itemCount, orderItems, total } = useOrder();
@@ -25,7 +32,7 @@ export default function Checkout() {
           </p>
           <Link
             href="/menu"
-            className="mt-5 inline-flex rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+            className="mt-5 inline-flex cursor-pointer rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
           >
             Back to menu
           </Link>
@@ -38,6 +45,12 @@ export default function Checkout() {
     <main className="min-h-screen bg-stone-50 px-4 py-6 font-inter text-stone-950">
       <section className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-2xl flex-col overflow-hidden rounded-lg border border-stone-200 bg-white">
         <header className="border-b border-stone-200 px-4 py-5 sm:px-6">
+          <Link
+            href="/menu"
+            className="inline-flex cursor-pointer items-center text-sm font-medium text-stone-600 transition hover:text-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+          >
+            ← Back to menu
+          </Link>
           <p className="text-sm font-medium text-stone-600">Checkout</p>
           <h1 className="mt-1 font-garamond text-3xl font-medium">
             Review your order
@@ -47,49 +60,55 @@ export default function Checkout() {
         {orderItems.length > 0 ? (
           <>
             <div className="flex-1 divide-y divide-stone-200">
-              {orderItems.map((item) => (
-                <article
-                  key={item.id}
-                  className="grid grid-cols-[1fr_auto] gap-4 px-4 py-4 sm:px-6"
-                >
-                  <div>
-                    <h2 className="font-semibold">{item.name}</h2>
-                    <p className="mt-1 text-sm text-stone-700">
-                      {item.quantity} × ₹
-                      {item.price +
-                        item.customizations.reduce(
-                          (sum, customization) => sum + customization.price,
-                          0,
-                        )}
-                    </p>
-                    {item.customizations.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-xs font-medium text-stone-600">
-                          Customizations
+              {orderItems.map((item) => {
+                const customizations =
+                  item.customizations.length > 0
+                    ? item.customizations
+                    : item.id
+                        .split("-")
+                        .slice(1)
+                        .map((optionId) =>
+                          customizationOptionsById.get(optionId),
+                        )
+                        .filter((option) => option !== undefined);
+                const customizationTotal = customizations.reduce(
+                  (sum, customization) => sum + customization.price,
+                  0,
+                );
+
+                return (
+                  <article
+                    key={item.id}
+                    className="grid grid-cols-[1fr_auto] gap-4 px-4 py-4 sm:px-6"
+                  >
+                    <div>
+                      <h2 className="font-semibold">{item.name}</h2>
+                      <p className="mt-1 text-sm text-stone-700">
+                        {item.quantity} × ₹{item.price}
+                      </p>
+                      {customizations.length > 0 && (
+                        <p className="mt-2 text-xs text-stone-700">
+                          <span className="font-medium text-stone-600">
+                            Customizations:
+                          </span>{" "}
+                          {customizations
+                            .map(
+                              (customization) =>
+                                `${customization.name} (+₹${customization.price})`,
+                            )
+                            .join(", ")}
                         </p>
-                        <ul className="mt-1 list-disc pl-4 text-xs text-stone-700">
-                          {item.customizations.map((customization) => (
-                            <li key={customization.id}>
-                              {customization.name} (+₹{customization.price})
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-stone-600">Item total</p>
-                    <p className="mt-1 font-semibold tabular-nums">
-                      ₹
-                      {(item.price +
-                        item.customizations.reduce(
-                          (sum, customization) => sum + customization.price,
-                          0,
-                        )) * item.quantity}
-                    </p>
-                  </div>
-                </article>
-              ))}
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-stone-600">Item total</p>
+                      <p className="mt-1 font-semibold tabular-nums">
+                        ₹{(item.price + customizationTotal) * item.quantity}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
             <footer className="sticky bottom-0 border-t border-stone-200 bg-white px-4 py-4 sm:px-6">
@@ -105,7 +124,7 @@ export default function Checkout() {
                 <button
                   type="button"
                   onClick={handlePlaceOrder}
-                  className="rounded-md bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                  className="cursor-pointer rounded-md bg-stone-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                 >
                   Place order
                 </button>
@@ -123,7 +142,7 @@ export default function Checkout() {
             </p>
             <Link
               href="/menu"
-              className="mt-5 rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+              className="mt-5 cursor-pointer rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
             >
               Back to menu
             </Link>

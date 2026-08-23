@@ -31,7 +31,7 @@ export default function SampleMenu() {
     {},
   );
   const [openCategories, setOpenCategories] = useState(
-    () => new Set([menuItems[0]?.category]),
+    () => new Set(menuItems.map((item) => item.category)),
   );
 
   return (
@@ -68,7 +68,7 @@ export default function SampleMenu() {
             type="button"
             aria-pressed={bestsellersOnly}
             onClick={() => setBestsellersOnly((current) => !current)}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
               bestsellersOnly
                 ? "border-transparent bg-stone-900 text-white"
                 : "border-stone-300 bg-transparent text-stone-500 hover:bg-stone-100/70"
@@ -87,7 +87,7 @@ export default function SampleMenu() {
             role="switch"
             aria-checked={vegMode}
             onClick={() => setVegMode((current) => !current)}
-            className={`inline-flex items-center gap-1.5 rounded-md border bg-transparent px-2.5 py-1.5 text-xs font-medium transition hover:bg-stone-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
+            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border bg-transparent px-2.5 py-1.5 text-xs font-medium transition hover:bg-stone-100/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-2 ${
               vegMode
                 ? "border-transparent bg-stone-100 text-stone-900"
                 : "border-stone-300 text-stone-500"
@@ -192,13 +192,13 @@ export default function SampleMenu() {
                 <button
                   type="button"
                   onClick={clearOrder}
-                  className="rounded-md px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                 >
                   Clear
                 </button>
                 <Link
                   href="/checkout"
-                  className="rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                  className="cursor-pointer rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                 >
                   Checkout
                 </Link>

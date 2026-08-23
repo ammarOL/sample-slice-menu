@@ -57,7 +57,7 @@ export default function SingleMenuItem({
   }
 
   function addCustomizedItem(customizations: CustomizationOption[]) {
-    addItem(itemId, itemName, itemPrice, customizations);
+    addItem(itemId, itemName, itemPrice, [...customizations]);
     setCustomizationMode(null);
   }
 
@@ -68,10 +68,6 @@ export default function SingleMenuItem({
         : [...current, optionId],
     );
   }
-
-  const selectedOptions = customizationOptions.filter((option) =>
-    selectedOptionIds.includes(option.id),
-  );
 
   return (
     <>
@@ -123,7 +119,7 @@ export default function SingleMenuItem({
               <button
                 type="button"
                 onClick={() => removeItem(itemId)}
-                className="h-9 rounded-l-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                className="h-9 cursor-pointer rounded-l-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                 aria-label={`Remove one ${itemName}`}
               >
                 -
@@ -132,7 +128,7 @@ export default function SingleMenuItem({
               <button
                 type="button"
                 onClick={openAddFlow}
-                className="h-9 rounded-r-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                className="h-9 cursor-pointer rounded-r-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                 aria-label={`Add one ${itemName}`}
               >
                 +
@@ -142,7 +138,7 @@ export default function SingleMenuItem({
             <button
               type="button"
               onClick={openAddFlow}
-              className="h-9 w-full rounded-md px-4 text-stone-950 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+              className="h-9 w-full cursor-pointer rounded-md px-4 text-stone-950 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
             >
               Add
             </button>
@@ -162,13 +158,21 @@ export default function SingleMenuItem({
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${itemId}-customization-title`}
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl sm:p-6"
+            className="relative w-full max-w-md rounded-lg bg-white p-5 shadow-xl sm:p-6"
           >
+            <button
+              type="button"
+              onClick={() => setCustomizationMode(null)}
+              aria-label="Cancel customization"
+              className="absolute right-4 top-4 grid size-8 cursor-pointer place-items-center rounded-md text-xl font-light leading-none text-stone-500 transition hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            >
+              ×
+            </button>
             {customizationMode === "repeat" ? (
               <>
                 <h3
                   id={`${itemId}-customization-title`}
-                  className="font-garamond text-2xl font-medium text-stone-950"
+                  className="pr-8 font-garamond text-2xl font-medium text-stone-950"
                 >
                   Repeat your customization?
                 </h3>
@@ -181,40 +185,31 @@ export default function SingleMenuItem({
                     ? lastCustomizations.map((option) => option.name).join(", ")
                     : "No extras selected"}
                 </div>
-                <div className="mt-6 flex items-center justify-between gap-3">
+                <div className="mt-6 grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setCustomizationMode(null)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                    onClick={() => {
+                      setSelectedOptionIds([]);
+                      setCustomizationMode("options");
+                    }}
+                    className="cursor-pointer rounded-md border border-stone-300 px-3 py-3 text-sm font-semibold text-stone-800 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                   >
-                    Cancel
+                    Customize again
                   </button>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedOptionIds([]);
-                        setCustomizationMode("options");
-                      }}
-                      className="rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-                    >
-                      Customize again
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addCustomizedItem(lastCustomizations)}
-                      className="rounded-md bg-stone-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-                    >
-                      Repeat customization
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addCustomizedItem(lastCustomizations)}
+                    className="cursor-pointer rounded-md bg-stone-950 px-3 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                  >
+                    Repeat customization
+                  </button>
                 </div>
               </>
             ) : (
               <>
                 <h3
                   id={`${itemId}-customization-title`}
-                  className="font-garamond text-2xl font-medium text-stone-950"
+                  className="pr-8 font-garamond text-2xl font-medium text-stone-950"
                 >
                   Customize {itemName}
                 </h3>
@@ -244,14 +239,20 @@ export default function SingleMenuItem({
                   <button
                     type="button"
                     onClick={() => setCustomizationMode(null)}
-                    className="rounded-md px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                      className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={() => addCustomizedItem(selectedOptions)}
-                    className="rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                    onClick={() =>
+                      addCustomizedItem(
+                        customizationOptions.filter((option) =>
+                          selectedOptionIds.includes(option.id),
+                        ),
+                      )
+                    }
+                    className="cursor-pointer rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
                   >
                     Add item
                   </button>
