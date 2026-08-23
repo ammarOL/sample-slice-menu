@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import SingleMenuItem from "./menu-components/single-menu-item";
 import Link from "next/link";
 import { menuItems } from "../data";
@@ -7,6 +8,17 @@ import { useOrder } from "../order-context/order-context";
 export default function SampleMenu() {
   const { clearOrder, itemCount, orderList, setItemQuantity, total } =
     useOrder();
+  const categoryGroups = menuItems.reduce<Record<string, typeof menuItems>>(
+    (groups, item) => {
+      groups[item.category] ??= [];
+      groups[item.category].push(item);
+      return groups;
+    },
+    {},
+  );
+  const [openCategories, setOpenCategories] = useState(
+    () => new Set([menuItems[0]?.category]),
+  );
 
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-6 font-inter text-stone-950">
@@ -21,16 +33,54 @@ export default function SampleMenu() {
         </header>
 
         <div>
-          {menuItems.map((each) => (
-            <SingleMenuItem
-              key={each.id}
-              itemId={each.id}
-              itemName={each.name}
-              itemDescription={each.description}
-              itemPrice={each.price}
-              quantity={orderList[each.id]?.quantity ?? 0}
-              alterQtyFunction={setItemQuantity}
-            />
+          {Object.entries(categoryGroups).map(([category, items]) => (
+            <details
+              key={category}
+              open={openCategories.has(category)}
+              onToggle={(event) => {
+                const nextOpen = event.currentTarget.open;
+                setOpenCategories((current) => {
+                  const next = new Set(current);
+                  if (nextOpen) {
+                    next.add(category);
+                  } else {
+                    next.delete(category);
+                  }
+                  return next;
+                });
+              }}
+              className="group border-b border-stone-200 last:border-b-0"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-4 text-stone-950 outline-none transition hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-stone-900 sm:px-6 [&::-webkit-details-marker]:hidden">
+                <span>
+                  <span className="block font-garamond text-2xl font-medium">
+                    {category}
+                  </span>
+                  <span className="mt-1 block text-xs text-stone-600">
+                    {items.length} {items.length === 1 ? "item" : "items"}
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="text-2xl leading-none text-stone-500 transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <div>
+                {items.map((each) => (
+                  <SingleMenuItem
+                    key={each.id}
+                    itemId={each.id}
+                    itemName={each.name}
+                    itemDescription={each.description}
+                    itemPrice={each.price}
+                    quantity={orderList[each.id]?.quantity ?? 0}
+                    alterQtyFunction={setItemQuantity}
+                  />
+                ))}
+              </div>
+            </details>
           ))}
         </div>
 
