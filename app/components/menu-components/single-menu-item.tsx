@@ -1,6 +1,4 @@
 "use client";
-import { useState } from "react";
-import { useEffect } from "react";
 
 export default function SingleMenuItem({
   itemId,
@@ -22,42 +20,60 @@ export default function SingleMenuItem({
     count: number,
   ) => void;
 }) {
-  const [qty, setQty] = useState(0);
+  const lineTotal = itemPrice * quantity;
 
-  function handleQtyReduce() {
-    setQty((prev) => prev - 1);
-  }
-
-  function handleQtyAdd() {
-    setQty((prev) => prev + 1);
-  }
-
-  useEffect(() => {
-    alterQtyFunction(itemId, itemName, itemPrice, qty);
-  }, [qty]);
-  // add the menu item component right here.
   return (
-    <div>
-      <div className="flex justify-between border-b border-gray-200 px-2 py-4">
-        <div>
-          <div className="text-xl">{itemName}</div>
-          <div className="text-sm text-gray-800">{itemDescription}</div>
-        </div>
-        <div className="border border-red-200">
-          <div className="text-right">₹{itemPrice}</div>
-          <div className="border border-gray-400 px-4 rounded-sm py-1 text-center mt-3">
-            {quantity > 0 ? (
-              <div className="flex gap-3 justify-center">
-                <div onClick={handleQtyReduce}>-</div>
-                <div>{quantity}</div>
-                <div onClick={handleQtyAdd}>+</div>{" "}
-              </div>
-            ) : (
-              <div onClick={() => setQty(1)}>Add</div>
-            )}
-          </div>
+    <article className="flex gap-4 border-b border-stone-200 px-4 py-4 last:border-b-0 sm:px-6">
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-semibold text-stone-950">{itemName}</h2>
+        <p className="mt-1 text-sm leading-5 text-stone-700">
+          {itemDescription}
+        </p>
+        {quantity > 0 && (
+          <p className="mt-2 text-sm font-medium text-stone-800">
+            {quantity} × ₹{itemPrice} = ₹{lineTotal}
+          </p>
+        )}
+      </div>
+
+      <div className="flex shrink-0 flex-col items-end gap-3">
+        <div className="text-sm font-semibold text-stone-950">₹{itemPrice}</div>
+        <div className="min-w-24 rounded-md border border-stone-300 bg-white text-center text-sm font-semibold">
+          {quantity > 0 ? (
+            <div className="grid grid-cols-3 items-center">
+              <button
+                type="button"
+                onClick={() =>
+                  alterQtyFunction(itemId, itemName, itemPrice, quantity - 1)
+                }
+                className="h-9 rounded-l-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                aria-label={`Remove one ${itemName}`}
+              >
+                -
+              </button>
+              <span className="tabular-nums text-stone-950">{quantity}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  alterQtyFunction(itemId, itemName, itemPrice, quantity + 1)
+                }
+                className="h-9 rounded-r-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                aria-label={`Add one ${itemName}`}
+              >
+                +
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => alterQtyFunction(itemId, itemName, itemPrice, 1)}
+              className="h-9 w-full rounded-md px-4 text-stone-950 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+            >
+              Add
+            </button>
+          )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }
