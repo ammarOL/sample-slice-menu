@@ -45,12 +45,14 @@ export default function Checkout() {
     <main className="min-h-screen bg-stone-50 px-4 py-6 font-inter text-stone-950">
       <section className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-2xl flex-col overflow-hidden rounded-lg border border-stone-200 bg-white">
         <header className="border-b border-stone-200 px-4 py-5 sm:px-6">
-          <Link
-            href="/menu"
-            className="inline-flex cursor-pointer items-center text-sm font-medium text-stone-600 transition hover:text-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
-          >
-            ← Back to menu
-          </Link>
+          <div className="mb-4 border-b border-stone-200 pb-4">
+            <Link
+              href="/menu"
+              className="inline-flex cursor-pointer items-center text-sm font-medium text-stone-600 transition hover:text-stone-950 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+            >
+              ← Back to menu
+            </Link>
+          </div>
           <p className="text-sm font-medium text-stone-600">Checkout</p>
           <h1 className="mt-1 font-garamond text-3xl font-medium">
             Review your order

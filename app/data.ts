@@ -1,3 +1,9 @@
+export type CustomizationOption = {
+  id: string;
+  name: string;
+  price: number;
+};
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -7,11 +13,7 @@ export type MenuItem = {
   isVegetarian: boolean;
   isBestseller: boolean;
   imageUrl: string;
-  customizationOptions?: {
-    id: string;
-    name: string;
-    price: number;
-  }[];
+  customizationOptions?: CustomizationOption[];
 };
 
 export const menuItems: MenuItem[] = [

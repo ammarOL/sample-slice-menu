@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import type { CustomizationOption } from "../data";
 
 export type OrderItem = {
   id: string;
@@ -18,11 +19,7 @@ export type OrderItem = {
   customizations: CustomizationOption[];
 };
 
-export type CustomizationOption = {
-  id: string;
-  name: string;
-  price: number;
-};
+export type { CustomizationOption } from "../data";
 
 type OrderContextValue = {
   orderItems: OrderItem[];

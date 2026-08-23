@@ -2,10 +2,11 @@
 import { useState } from "react";
 import SingleMenuItem from "./menu-components/single-menu-item";
 import Link from "next/link";
-import { menuItems } from "../data";
 import { useOrder } from "../order-context/order-context";
+import { useMenu } from "../menu-context/menu-context";
 
 export default function SampleMenu() {
+  const { menuItems } = useMenu();
   const {
     addItem,
     clearOrder,
