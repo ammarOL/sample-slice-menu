@@ -27,6 +27,7 @@ type MenuContextValue = {
   updateMenuItem: (item: MenuItem) => void;
   deleteMenuItem: (id: string) => void;
   createCategory: (name: string) => void;
+  deleteCategory: (name: string) => void;
 };
 
 const MenuContext = createContext<MenuContextValue | null>(null);
@@ -121,6 +122,10 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const deleteCategory = useCallback((name: string) => {
+    setCategories((current) => current.filter((category) => category !== name));
+  }, []);
+
   const value = useMemo(
     () => ({
       menuItems,
@@ -128,6 +133,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       hydrated,
       createMenuItem,
       deleteMenuItem,
+      deleteCategory,
       updateMenuItem,
       createCategory,
     }),
@@ -135,6 +141,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       categories,
       createCategory,
       createMenuItem,
+      deleteCategory,
       deleteMenuItem,
       hydrated,
       menuItems,

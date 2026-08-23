@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { logoutAdmin } from "./actions";
 import { useMenu } from "../menu-context/menu-context";
 import type { CustomizationOption, MenuItem } from "../data";
@@ -155,6 +156,7 @@ export default function AdminDashboard() {
     categories,
     createCategory,
     createMenuItem,
+    deleteCategory,
     deleteMenuItem,
     menuItems,
     updateMenuItem,
@@ -166,6 +168,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const groupedItems = useMemo(
     () =>
@@ -209,6 +212,23 @@ export default function AdminDashboard() {
     if (!editingId) return;
     deleteMenuItem(editingId);
     closeEditor();
+  }
+
+  function requestCategoryDelete(category: string, itemCount: number) {
+    if (itemCount > 0) {
+      toast.error("Category still has menu items", {
+        description: "Move or delete the items in this category before deleting it.",
+      });
+      return;
+    }
+
+    setError("");
+    setCategoryToDelete(category);
+  }
+
+  function confirmCategoryDelete(category: string) {
+    deleteCategory(category);
+    setCategoryToDelete(null);
   }
 
   function updateDraft<K extends keyof ItemDraft>(field: K, value: ItemDraft[K]) {
@@ -349,9 +369,37 @@ export default function AdminDashboard() {
               <section key={category} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
                 <header className="flex items-center justify-between border-b border-stone-200 px-4 py-3 sm:px-5">
                   <h2 className="font-garamond text-2xl font-medium">{category}</h2>
-                  <span className="text-xs text-stone-600">
-                    {items.length} {items.length === 1 ? "item" : "items"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-stone-600">
+                      {items.length} {items.length === 1 ? "item" : "items"}
+                    </span>
+                    {categoryToDelete === category ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => confirmCategoryDelete(category)}
+                          className="cursor-pointer rounded-md bg-red-700 px-2 py-1 text-xs font-semibold text-white hover:bg-red-800"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCategoryToDelete(null)}
+                          className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-stone-600 hover:bg-stone-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => requestCategoryDelete(category, items.length)}
+                        className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </header>
                 {items.length > 0 ? (
                   <div className="divide-y divide-stone-200">
@@ -393,6 +441,7 @@ export default function AdminDashboard() {
               </section>
             ))}
           </div>
+          {error && <p className="text-sm text-red-700">{error}</p>}
         </section>
       </div>
 
