@@ -4,6 +4,7 @@ export type MenuItem = {
   description: string;
   price: number;
   category: string;
+  isVegetarian: boolean;
 };
 
 export const menuItems: MenuItem[] = [
@@ -13,6 +14,7 @@ export const menuItems: MenuItem[] = [
     description: "Fresh baked bread with garlic and cheese toppings.",
     price: 300,
     category: "Breads & Sides",
+    isVegetarian: true,
   },
   {
     id: "2",
@@ -20,6 +22,7 @@ export const menuItems: MenuItem[] = [
     description: "Classic pizza with tomato, mozzarella, and fresh basil.",
     price: 450,
     category: "Pizzas",
+    isVegetarian: true,
   },
   {
     id: "3",
@@ -27,6 +30,7 @@ export const menuItems: MenuItem[] = [
     description: "Grilled paneer cubes marinated in aromatic spices.",
     price: 380,
     category: "Mains",
+    isVegetarian: true,
   },
   {
     id: "4",
@@ -34,6 +38,7 @@ export const menuItems: MenuItem[] = [
     description: "Penne pasta tossed in a spicy tomato and garlic sauce.",
     price: 420,
     category: "Pasta",
+    isVegetarian: true,
   },
   {
     id: "5",
@@ -41,6 +46,7 @@ export const menuItems: MenuItem[] = [
     description: "Espresso with steamed milk and a layer of milk foam.",
     price: 220,
     category: "Coffee",
+    isVegetarian: true,
   },
   {
     id: "6",
@@ -48,6 +54,7 @@ export const menuItems: MenuItem[] = [
     description: "Chilled espresso blended with cold milk over ice.",
     price: 250,
     category: "Coffee",
+    isVegetarian: true,
   },
   {
     id: "7",
@@ -55,6 +62,7 @@ export const menuItems: MenuItem[] = [
     description: "Warm, fudgy chocolate brownie served with chocolate sauce.",
     price: 280,
     category: "Desserts",
+    isVegetarian: true,
   },
   {
     id: "8",
@@ -62,5 +70,6 @@ export const menuItems: MenuItem[] = [
     description: "Creamy New York-style cheesecake with a biscuit crust.",
     price: 320,
     category: "Desserts",
+    isVegetarian: true,
   },
 ];

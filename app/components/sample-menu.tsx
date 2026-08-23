@@ -86,6 +86,7 @@ export default function SampleMenu() {
                     itemName={each.name}
                     itemDescription={each.description}
                     itemPrice={each.price}
+                    isVegetarian={each.isVegetarian}
                     quantity={orderList[each.id]?.quantity ?? 0}
                     alterQtyFunction={setItemQuantity}
                   />
