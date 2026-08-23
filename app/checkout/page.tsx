@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { menuItems } from "../data";
 import { useOrder } from "../order-context/order-context";
+import { useOrders } from "../orders-context/orders-context";
 
 const customizationOptionsById = new Map(
   menuItems
@@ -13,9 +14,11 @@ const customizationOptionsById = new Map(
 
 export default function Checkout() {
   const { clearOrder, itemCount, orderItems, total } = useOrder();
+  const { createOrder } = useOrders();
   const [hasPlacedOrder, setHasPlacedOrder] = useState(false);
 
   function handlePlaceOrder() {
+    createOrder(orderItems, total);
     setHasPlacedOrder(true);
     clearOrder();
   }
@@ -23,7 +26,15 @@ export default function Checkout() {
   if (hasPlacedOrder) {
     return (
       <main className="flex min-h-screen items-center bg-stone-50 px-4 py-6 font-inter text-stone-950">
-        <section className="mx-auto w-full max-w-md rounded-lg border border-stone-200 bg-white px-5 py-6 text-center">
+        <section className="order-success-panel mx-auto w-full max-w-md rounded-lg border border-stone-200 bg-white px-5 py-6 text-center">
+          <div
+            className="order-success-mark mx-auto grid size-16 place-items-center rounded-full border-4 border-emerald-100 bg-emerald-50 text-emerald-700"
+            aria-hidden="true"
+          >
+            <span className="order-success-check text-3xl font-semibold leading-none">
+              ✓
+            </span>
+          </div>
           <h1 className="font-garamond text-3xl font-medium">
             Order placed
           </h1>

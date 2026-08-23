@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { logoutAdmin } from "./actions";
+import { PrimarySidebar } from "./admin-sidebar";
 import { useMenu } from "../menu-context/menu-context";
 import type { CustomizationOption, MenuItem } from "../data";
 
@@ -63,43 +62,6 @@ function draftFromItem(item: MenuItem): ItemDraft {
       price: String(option.price),
     })),
   };
-}
-
-function PrimarySidebar({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <aside className="flex h-full flex-col border-stone-200 bg-stone-950 p-4 text-white lg:border-r">
-      <div>
-        <p className="font-garamond text-2xl">Cafe Sonder</p>
-        <p className="mt-1 text-xs text-stone-400">Administration</p>
-      </div>
-      <nav className="mt-8 space-y-1" aria-label="Admin navigation">
-        <button
-          type="button"
-          onClick={onNavigate}
-          className="flex w-full cursor-pointer items-center rounded-md bg-white/10 px-3 py-2.5 text-left text-sm font-semibold text-white"
-        >
-          Menu customization
-        </button>
-      </nav>
-      <div className="mt-auto border-t border-white/10 pt-4">
-        <Link
-          href="/menu"
-          onClick={onNavigate}
-          className="block cursor-pointer rounded-md px-3 py-2 text-sm text-stone-300 transition hover:bg-white/10 hover:text-white"
-        >
-          View public menu
-        </Link>
-        <form action={logoutAdmin} className="mt-1">
-          <button
-            type="submit"
-            className="w-full cursor-pointer rounded-md px-3 py-2 text-left text-sm text-stone-300 transition hover:bg-white/10 hover:text-white"
-          >
-            Sign out
-          </button>
-        </form>
-      </div>
-    </aside>
-  );
 }
 
 function OptionsSidebar({
@@ -343,7 +305,7 @@ export default function AdminDashboard() {
 
       <div className="mx-auto min-h-screen max-w-[1600px] lg:grid lg:grid-cols-[190px_210px_minmax(0,1fr)]">
         <div className="hidden lg:block">
-          <PrimarySidebar />
+          <PrimarySidebar activePage="menu" />
         </div>
         <div className="hidden lg:block">
           <OptionsSidebar onAddItem={openNewItem} onAddCategory={openNewCategory} />
@@ -465,7 +427,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             {mobilePanel === "navigation" ? (
-              <PrimarySidebar onNavigate={() => setMobilePanel(null)} />
+              <PrimarySidebar activePage="menu" onNavigate={() => setMobilePanel(null)} />
             ) : (
               <OptionsSidebar
                 onAddItem={openNewItem}
