@@ -8,7 +8,14 @@ import { useOrder } from "../order-context/order-context";
 export default function SampleMenu() {
   const { clearOrder, itemCount, orderList, setItemQuantity, total } =
     useOrder();
-  const categoryGroups = menuItems.reduce<Record<string, typeof menuItems>>(
+  const [bestsellersOnly, setBestsellersOnly] = useState(false);
+  const [vegMode, setVegMode] = useState(false);
+  const filteredItems = menuItems.filter((item) => {
+    if (bestsellersOnly && !item.isBestseller) return false;
+    if (vegMode && !item.isVegetarian) return false;
+    return true;
+  });
+  const categoryGroups = filteredItems.reduce<Record<string, typeof menuItems>>(
     (groups, item) => {
       groups[item.category] ??= [];
       groups[item.category].push(item);
@@ -46,6 +53,43 @@ export default function SampleMenu() {
             </p>
           </div>
         </header>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            aria-pressed={bestsellersOnly}
+            onClick={() => setBestsellersOnly((current) => !current)}
+            className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2 ${
+              bestsellersOnly
+                ? "border-stone-950 bg-stone-950 text-white"
+                : "border-stone-300 bg-white text-stone-800 hover:bg-stone-50"
+            }`}
+          >
+            <span aria-hidden="true">★</span>
+            Bestsellers
+          </button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={vegMode}
+            onClick={() => setVegMode((current) => !current)}
+            className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-800 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+          >
+            <span
+              aria-hidden="true"
+              className={`relative h-5 w-9 rounded-full transition ${
+                vegMode ? "bg-emerald-700" : "bg-stone-300"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 size-4 rounded-full bg-white transition ${
+                  vegMode ? "left-4" : "left-0.5"
+                }`}
+              />
+            </span>
+            Veg mode {vegMode ? "on" : "off"}
+          </button>
+        </div>
 
         <div>
           {Object.entries(categoryGroups).map(([category, items]) => (
@@ -91,6 +135,7 @@ export default function SampleMenu() {
                     itemDescription={each.description}
                     itemPrice={each.price}
                     isVegetarian={each.isVegetarian}
+                    isBestseller={each.isBestseller}
                     imageUrl={each.imageUrl}
                     quantity={orderList[each.id]?.quantity ?? 0}
                     alterQtyFunction={setItemQuantity}
@@ -99,6 +144,11 @@ export default function SampleMenu() {
               </div>
             </details>
           ))}
+          {Object.keys(categoryGroups).length === 0 && (
+            <p className="px-4 py-10 text-center text-sm text-stone-700 sm:px-6">
+              No menu items match these filters.
+            </p>
+          )}
         </div>
 
         {total !== 0 && (

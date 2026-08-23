@@ -7,6 +7,7 @@ export default function SingleMenuItem({
   itemDescription,
   itemPrice,
   isVegetarian,
+  isBestseller,
   imageUrl,
   quantity,
   alterQtyFunction,
@@ -16,6 +17,7 @@ export default function SingleMenuItem({
   itemDescription: string;
   itemPrice: number;
   isVegetarian: boolean;
+  isBestseller: boolean;
   imageUrl: string;
   quantity: number;
   alterQtyFunction: (
@@ -28,7 +30,7 @@ export default function SingleMenuItem({
   return (
     <article className="flex gap-4 border-b border-stone-200 px-4 py-4 last:border-b-0 sm:px-6">
       <div className="min-w-0 flex-1">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-stone-950">
+        <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-stone-950">
           <span
             aria-label={isVegetarian ? "Vegetarian" : "Non-vegetarian"}
             className={`grid size-4 shrink-0 place-items-center rounded-[3px] border-2 ${
@@ -43,6 +45,12 @@ export default function SingleMenuItem({
             />
           </span>
           {itemName}
+          {isBestseller && (
+            <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+              <span aria-hidden="true">★</span>
+              Bestseller
+            </span>
+          )}
         </h2>
         <p className="mt-1 text-sm leading-5 text-stone-700">
           {itemDescription}
