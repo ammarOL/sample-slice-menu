@@ -23,13 +23,24 @@ export default function SampleMenu() {
   return (
     <main className="min-h-screen bg-stone-50 px-4 py-6 font-inter text-stone-950">
       <div className="mx-auto max-w-2xl overflow-hidden rounded-lg border border-stone-200 bg-white">
-        <header className="border-b border-stone-200 px-4 py-5 sm:px-6">
-          <h1 className="font-garamond text-3xl font-medium text-stone-950">
-            Cafe Sonder
-          </h1>
-          <p className="mt-1 text-sm text-stone-700">
-            Serving coffee, plates, and desserts in Pune since 1951.
-          </p>
+        <header className="relative isolate min-h-56 overflow-hidden border-b border-stone-200 px-4 py-8 sm:px-6">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-20 bg-cover bg-[center_72%]"
+            style={{ backgroundImage: "url('/cafe-bg.jpg')" }}
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 bg-stone-950/55"
+          />
+          <div className="relative flex min-h-40 flex-col justify-end text-white">
+            <h1 className="font-garamond text-4xl font-medium text-white">
+              Cafe Sonder
+            </h1>
+            <p className="mt-1 text-sm text-white/90">
+              Serving coffee, plates, and desserts in Pune since 1951.
+            </p>
+          </div>
         </header>
 
         <div>
