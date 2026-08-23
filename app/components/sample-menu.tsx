@@ -21,7 +21,11 @@ export default function SampleMenu() {
   );
 
   return (
-    <main className="min-h-screen bg-stone-50 px-4 py-6 font-inter text-stone-950">
+    <main
+      className={`min-h-screen bg-stone-50 px-4 pt-6 font-inter text-stone-950 ${
+        total !== 0 ? "pb-28" : "pb-6"
+      }`}
+    >
       <div className="mx-auto max-w-2xl overflow-hidden rounded-lg border border-stone-200 bg-white">
         <header className="relative isolate min-h-56 overflow-hidden border-b border-stone-200 px-4 py-8 sm:px-6">
           <div
@@ -97,27 +101,29 @@ export default function SampleMenu() {
         </div>
 
         {total !== 0 && (
-          <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-stone-200 bg-white px-4 py-3 shadow-sm sm:px-6">
-            <div>
-              <div className="text-xs text-stone-600">
-                {itemCount} {itemCount === 1 ? "item" : "items"}
+          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white px-4 py-3 shadow-sm sm:px-6">
+            <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-stone-600">
+                  {itemCount} {itemCount === 1 ? "item" : "items"}
+                </div>
+                <div className="text-lg font-semibold">₹{total}</div>
               </div>
-              <div className="text-lg font-semibold">₹{total}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={clearOrder}
-                className="rounded-md px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-              >
-                Clear
-              </button>
-              <Link
-                href="/checkout"
-                className="rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-              >
-                Checkout
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearOrder}
+                  className="rounded-md px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                >
+                  Clear
+                </button>
+                <Link
+                  href="/checkout"
+                  className="rounded-md bg-stone-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                >
+                  Checkout
+                </Link>
+              </div>
             </div>
           </div>
         )}
