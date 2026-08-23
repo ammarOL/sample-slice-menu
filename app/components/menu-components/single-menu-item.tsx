@@ -22,8 +22,6 @@ export default function SingleMenuItem({
     count: number,
   ) => void;
 }) {
-  const lineTotal = itemPrice * quantity;
-
   return (
     <article className="flex gap-4 border-b border-stone-200 px-4 py-4 last:border-b-0 sm:px-6">
       <div className="min-w-0 flex-1">
@@ -46,11 +44,6 @@ export default function SingleMenuItem({
         <p className="mt-1 text-sm leading-5 text-stone-700">
           {itemDescription}
         </p>
-        {quantity > 0 && (
-          <p className="mt-2 text-sm font-medium text-stone-800">
-            {quantity} × ₹{itemPrice} = ₹{lineTotal}
-          </p>
-        )}
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-3">
