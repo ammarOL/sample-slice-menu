@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import SingleMenuItem from "./menu-components/single-menu-item";
 import Link from "next/link";
+import { menuItems } from "../data";
 
 type OrderItem = {
   name: string;
@@ -47,36 +48,24 @@ export default function SampleMenu() {
   }, [orderList]);
   return (
     <div className="lg:max-w-5xl lg:w-xl lg:mx-auto border">
-      <div className="text-2xl font-medium">
+      <div className="text-2xl font-medium font-garamond">
         Cafe Sonder (background image in behind the title as well.)
       </div>
-      <div>Serving the best coffee in pune since 1951.</div>
+      <div className="font-inter">
+        Serving the best coffee in pune since 1951.
+      </div>
       {/* This is where the menu item starts. */}
       <div>
-        <SingleMenuItem
-          itemId="1"
-          itemName="garlic bread"
-          itemDescription="fresh baked bread with garlic and cheese toppings."
-          itemPrice={300}
-          quantity={orderList["1"]?.quantity ?? 0}
-          alterQtyFunction={alterQtyFunction}
-        />
-        <SingleMenuItem
-          itemId="2"
-          itemName="garlic bread"
-          itemDescription="fresh baked bread with garlic and cheese toppings."
-          itemPrice={300}
-          quantity={orderList["2"]?.quantity ?? 0}
-          alterQtyFunction={alterQtyFunction}
-        />
-        <SingleMenuItem
-          itemId="3"
-          itemName="garlic bread"
-          itemDescription="fresh baked bread with garlic and cheese toppings."
-          itemPrice={300}
-          quantity={orderList["3"]?.quantity ?? 0}
-          alterQtyFunction={alterQtyFunction}
-        />
+        {menuItems.map((each) => (
+          <SingleMenuItem
+            itemId={each.id}
+            itemName={each.name}
+            itemDescription={each.description}
+            itemPrice={each.price}
+            quantity={orderList[each.id]?.quantity ?? 0}
+            alterQtyFunction={alterQtyFunction}
+          />
+        ))}
       </div>
 
       {total !== 0 && (

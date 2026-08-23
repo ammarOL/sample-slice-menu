@@ -38,14 +38,14 @@ export default function SingleMenuItem({
   // add the menu item component right here.
   return (
     <div>
-      <div className="flex justify-between border px-2 py-2">
+      <div className="flex justify-between border-b border-gray-200 px-2 py-4">
         <div>
-          <div>{itemName}</div>
-          <div>{itemDescription}</div>
+          <div className="text-xl">{itemName}</div>
+          <div className="text-sm text-gray-800">{itemDescription}</div>
         </div>
-        <div>
-          <div>₹{itemPrice}</div>
-          <div className="border px-3 py-1 text-center">
+        <div className="border border-red-200">
+          <div className="text-right">₹{itemPrice}</div>
+          <div className="border border-gray-400 px-4 rounded-sm py-1 text-center mt-3">
             {quantity > 0 ? (
               <div className="flex gap-3 justify-center">
                 <div onClick={handleQtyReduce}>-</div>
