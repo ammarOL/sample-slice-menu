@@ -151,14 +151,21 @@ function OptionsSidebar({
 }
 
 export default function AdminDashboard() {
-  const { categories, createCategory, createMenuItem, menuItems, updateMenuItem } =
-    useMenu();
+  const {
+    categories,
+    createCategory,
+    createMenuItem,
+    deleteMenuItem,
+    menuItems,
+    updateMenuItem,
+  } = useMenu();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItemDraft);
   const [categoryDraft, setCategoryDraft] = useState("");
   const [error, setError] = useState("");
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const groupedItems = useMemo(
     () =>
@@ -171,6 +178,7 @@ export default function AdminDashboard() {
 
   function openNewItem() {
     setError("");
+    setConfirmDelete(false);
     setEditingId(null);
     setItemDraft(emptyItemDraft());
     setEditorMode("item");
@@ -178,6 +186,7 @@ export default function AdminDashboard() {
 
   function openEditItem(item: MenuItem) {
     setError("");
+    setConfirmDelete(false);
     setEditingId(item.id);
     setItemDraft(draftFromItem(item));
     setEditorMode("item");
@@ -192,7 +201,14 @@ export default function AdminDashboard() {
   function closeEditor() {
     setEditorMode(null);
     setEditingId(null);
+    setConfirmDelete(false);
     setError("");
+  }
+
+  function handleDeleteItem() {
+    if (!editingId) return;
+    deleteMenuItem(editingId);
+    closeEditor();
   }
 
   function updateDraft<K extends keyof ItemDraft>(field: K, value: ItemDraft[K]) {
@@ -505,6 +521,41 @@ export default function AdminDashboard() {
                   </button>
                 </fieldset>
                 {error && <p className="text-sm text-red-700">{error}</p>}
+                {editingId && (
+                  <div className="border-t border-red-100 pt-5">
+                    {!confirmDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(true)}
+                        className="cursor-pointer rounded-md px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
+                      >
+                        Delete item
+                      </button>
+                    ) : (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                        <p className="text-sm font-medium text-red-900">
+                          Delete this menu item permanently?
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(false)}
+                            className="cursor-pointer rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700 hover:bg-red-100"
+                          >
+                            Keep item
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDeleteItem}
+                            className="cursor-pointer rounded-md bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                          >
+                            Delete permanently
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <EditorActions onCancel={closeEditor} submitLabel={editingId ? "Save changes" : "Add item"} />
               </form>
             )}

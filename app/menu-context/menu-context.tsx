@@ -25,6 +25,7 @@ type MenuContextValue = {
   hydrated: boolean;
   createMenuItem: (item: NewMenuItem) => void;
   updateMenuItem: (item: MenuItem) => void;
+  deleteMenuItem: (id: string) => void;
   createCategory: (name: string) => void;
 };
 
@@ -110,6 +111,10 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const deleteMenuItem = useCallback((id: string) => {
+    setMenuItems((current) => current.filter((item) => item.id !== id));
+  }, []);
+
   const createCategory = useCallback((name: string) => {
     setCategories((current) =>
       current.includes(name) ? current : [...current, name],
@@ -122,10 +127,19 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       categories,
       hydrated,
       createMenuItem,
+      deleteMenuItem,
       updateMenuItem,
       createCategory,
     }),
-    [categories, createCategory, createMenuItem, hydrated, menuItems, updateMenuItem],
+    [
+      categories,
+      createCategory,
+      createMenuItem,
+      deleteMenuItem,
+      hydrated,
+      menuItems,
+      updateMenuItem,
+    ],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;
