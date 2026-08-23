@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { logoutAdmin } from "./actions";
 
-export type AdminPage = "menu" | "orders";
+export type AdminPage = "menu" | "orders" | "qr";
 
 export function PrimarySidebar({
   activePage,
@@ -31,6 +31,9 @@ export function PrimarySidebar({
         </Link>
         <Link href="/admin/orders" onClick={onNavigate} className={linkClass("orders")}>
           Orders
+        </Link>
+        <Link href="/admin/qr" onClick={onNavigate} className={linkClass("qr")}>
+          QR code
         </Link>
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
