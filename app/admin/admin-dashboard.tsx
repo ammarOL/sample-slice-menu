@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PrimarySidebar } from "./admin-sidebar";
 import { useMenu } from "../menu-context/menu-context";
@@ -8,6 +8,14 @@ import type { CustomizationOption, MenuItem } from "../data";
 
 type EditorMode = "item" | "category" | null;
 type MobilePanel = "navigation" | "actions" | null;
+type ImportStatus =
+  | "idle"
+  | "selected"
+  | "preparing"
+  | "parsing"
+  | "review"
+  | "importing"
+  | "error";
 
 type CustomizationDraft = {
   id: string;
@@ -25,6 +33,31 @@ type ItemDraft = {
   isBestseller: boolean;
   customizationOptions: CustomizationDraft[];
 };
+
+type ImportedItemDraft = ItemDraft & {
+  id: string;
+  selected: boolean;
+  reviewFields: string[];
+};
+
+type ParsedImportItem = {
+  name: string;
+  description: string;
+  price: number | null;
+  category: string;
+  isVegetarian: boolean;
+  isBestseller: boolean;
+  imageUrl: string;
+  customizationOptions: Array<{
+    name: string;
+    price: number | null;
+  }>;
+};
+
+const MAX_IMPORT_PAGES = 5;
+const MAX_IMPORT_IMAGE_SIZE = 1536 * 1024;
+const DEFAULT_IMPORT_IMAGE_URL =
+  "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=320&q=80";
 
 function createDraftId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -67,10 +100,12 @@ function draftFromItem(item: MenuItem): ItemDraft {
 function OptionsSidebar({
   onAddItem,
   onAddCategory,
+  onUploadMenu,
   onNavigate,
 }: {
   onAddItem: () => void;
   onAddCategory: () => void;
+  onUploadMenu: () => void;
   onNavigate?: () => void;
 }) {
   return (
@@ -105,11 +140,433 @@ function OptionsSidebar({
             +
           </span>
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            onUploadMenu();
+            onNavigate?.();
+          }}
+          className="flex w-full cursor-pointer items-center justify-between rounded-md border border-stone-300 px-3 py-2.5 text-left text-sm font-semibold text-stone-900 transition hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+        >
+          Upload menu
+          <span aria-hidden="true" className="text-lg leading-none text-stone-500">
+            ↑
+          </span>
+        </button>
       </div>
       <p className="mt-8 text-sm leading-5 text-stone-600">
-        Select Edit on any menu item to update its details and customizations.
+        Select Edit on any menu item to update details, or upload a menu to import
+        several items at once.
       </p>
     </aside>
+  );
+}
+
+async function canvasToSizedJpegDataUrl(canvas: HTMLCanvasElement) {
+  let quality = 0.68;
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+
+  while (dataUrl.length > MAX_IMPORT_IMAGE_SIZE && quality > 0.34) {
+    quality -= 0.1;
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  return dataUrl;
+}
+
+async function imageFileToDataUrl(file: File) {
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+  image.src = objectUrl;
+
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("This image could not be opened."));
+  });
+
+  const maxSide = 1200;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("This browser could not prepare the menu image.");
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(objectUrl);
+  return canvasToSizedJpegDataUrl(canvas);
+}
+
+async function pdfFileToDataUrls(file: File) {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url,
+  ).toString();
+
+  const data = new Uint8Array(await file.arrayBuffer());
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  const pageCount = Math.min(pdf.numPages, MAX_IMPORT_PAGES);
+  const images: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1.25 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("This browser could not prepare the PDF page.");
+
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvas, canvasContext: context, viewport }).promise;
+    images.push(await canvasToSizedJpegDataUrl(canvas));
+  }
+
+  return images;
+}
+
+async function fileToMenuImages(file: File) {
+  if (file.type === "application/pdf") return pdfFileToDataUrls(file);
+  if (file.type.startsWith("image/")) return [await imageFileToDataUrl(file)];
+
+  throw new Error("Upload a PDF or image file.");
+}
+
+function importedDraftFromParsed(item: ParsedImportItem): ImportedItemDraft {
+  const reviewFields: string[] = [];
+  const description = item.description.trim();
+  const category = item.category.trim() || "Imported";
+  const imageUrl = item.imageUrl.trim() || DEFAULT_IMPORT_IMAGE_URL;
+  const price = item.price && item.price > 0 ? String(item.price) : "";
+
+  if (!description) reviewFields.push("Description");
+  if (!item.category.trim()) reviewFields.push("Category");
+  if (!item.imageUrl.trim()) reviewFields.push("Image");
+  if (!price) reviewFields.push("Price");
+
+  return {
+    id: createDraftId(),
+    selected: Boolean(item.name.trim() && price),
+    reviewFields,
+    name: item.name.trim(),
+    description,
+    imageUrl,
+    price,
+    category,
+    isVegetarian: item.isVegetarian,
+    isBestseller: item.isBestseller,
+    customizationOptions: item.customizationOptions.map((option) => ({
+      id: createDraftId(),
+      name: option.name.trim(),
+      price: option.price && option.price > 0 ? String(option.price) : "",
+    })),
+  };
+}
+
+function labelForField(field: keyof ItemDraft) {
+  if (field === "imageUrl") return "Image";
+  return field.charAt(0).toUpperCase() + field.slice(1);
+}
+
+function isImportDraftValid(item: ImportedItemDraft) {
+  const price = Number(item.price);
+  return (
+    item.name.trim().length > 0 &&
+    item.description.trim().length > 0 &&
+    item.imageUrl.trim().length > 0 &&
+    item.category.trim().length > 0 &&
+    Number.isFinite(price) &&
+    price > 0
+  );
+}
+
+function ImportPanel({
+  fileName,
+  status,
+  error,
+  importedItems,
+  onClose,
+  onRetry,
+  onImport,
+  onToggleItem,
+  onRemoveItem,
+  onUpdateItem,
+  onUpdateCustomization,
+}: {
+  fileName: string;
+  status: ImportStatus;
+  error: string;
+  importedItems: ImportedItemDraft[];
+  onClose: () => void;
+  onRetry: () => void;
+  onImport: () => void;
+  onToggleItem: (id: string, selected: boolean) => void;
+  onRemoveItem: (id: string) => void;
+  onUpdateItem: <K extends keyof ItemDraft>(
+    id: string,
+    field: K,
+    value: ItemDraft[K],
+  ) => void;
+  onUpdateCustomization: (
+    itemId: string,
+    optionId: string,
+    field: "name" | "price",
+    value: string,
+  ) => void;
+}) {
+  const selectedCount = importedItems.filter((item) => item.selected).length;
+  const isBusy = status === "preparing" || status === "parsing" || status === "importing";
+  const statusLabel =
+    status === "selected"
+      ? "File selected"
+      : status === "preparing"
+        ? "Preparing pages"
+        : status === "parsing"
+          ? "Parsing menu"
+          : status === "importing"
+            ? "Importing items"
+            : status === "error"
+              ? "Import needs attention"
+              : "Review parsed items";
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-stone-950/40" onClick={onClose}>
+      <aside
+        className="h-full w-full max-w-4xl overflow-y-auto bg-white px-5 py-6 shadow-xl sm:px-7"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-stone-200 pb-4">
+          <div>
+            <p className="text-sm font-medium text-stone-600">Menu import</p>
+            <h2 className="mt-1 font-garamond text-3xl font-medium">
+              Upload menu
+            </h2>
+            {fileName && (
+              <p className="mt-1 text-sm text-stone-600">
+                {statusLabel}: {fileName}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close import panel"
+            className="size-8 cursor-pointer rounded-md text-xl text-stone-500 hover:bg-stone-100"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-6">
+          {isBusy && (
+            <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-4">
+              <p className="text-sm font-semibold text-stone-900">{statusLabel}</p>
+              <p className="mt-1 text-sm text-stone-600">
+                Keep this panel open while the menu is prepared for review.
+              </p>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4">
+              <p className="text-sm font-semibold text-red-900">Menu import failed</p>
+              <p className="mt-1 text-sm text-red-800">{error}</p>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-4 cursor-pointer rounded-md bg-stone-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800"
+              >
+                Choose another file
+              </button>
+            </div>
+          )}
+
+          {status === "review" && (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-stone-900">
+                    {importedItems.length} parsed{" "}
+                    {importedItems.length === 1 ? "item" : "items"}
+                  </p>
+                  <p className="mt-1 text-sm text-stone-600">
+                    Review inferred fields before adding selected rows to the menu.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="cursor-pointer rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-50"
+                  >
+                    Replace file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onImport}
+                    className="cursor-pointer rounded-md bg-stone-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300"
+                    disabled={selectedCount === 0}
+                  >
+                    Import {selectedCount} selected
+                  </button>
+                </div>
+              </div>
+
+              {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+
+              <div className="mt-5 space-y-4">
+                {importedItems.map((item) => {
+                  const isValid = isImportDraftValid(item);
+
+                  return (
+                    <article
+                      key={item.id}
+                      className="rounded-lg border border-stone-200 bg-white p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-stone-900">
+                          <input
+                            type="checkbox"
+                            checked={item.selected}
+                            onChange={(event) =>
+                              onToggleItem(item.id, event.target.checked)
+                            }
+                            className="size-4 cursor-pointer accent-stone-950"
+                          />
+                          Import this item
+                        </label>
+                        <div className="flex items-center gap-2">
+                          {!isValid && (
+                            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
+                              Needs review
+                            </span>
+                          )}
+                          {item.reviewFields.length > 0 && (
+                            <span className="text-xs text-stone-600">
+                              Check {item.reviewFields.join(", ")}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onRemoveItem(item.id)}
+                            className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr_120px]">
+                        <TextField
+                          label="Name"
+                          value={item.name}
+                          onChange={(value) => onUpdateItem(item.id, "name", value)}
+                          required
+                        />
+                        <TextField
+                          label="Category"
+                          value={item.category}
+                          onChange={(value) => onUpdateItem(item.id, "category", value)}
+                          required
+                        />
+                        <TextField
+                          label="Price"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.price}
+                          onChange={(value) => onUpdateItem(item.id, "price", value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+                        <TextAreaField
+                          label="Description"
+                          value={item.description}
+                          onChange={(value) =>
+                            onUpdateItem(item.id, "description", value)
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Image URL"
+                          value={item.imageUrl}
+                          onChange={(value) => onUpdateItem(item.id, "imageUrl", value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <ToggleField
+                          label="Vegetarian"
+                          checked={item.isVegetarian}
+                          onChange={(value) =>
+                            onUpdateItem(item.id, "isVegetarian", value)
+                          }
+                        />
+                        <ToggleField
+                          label="Bestseller"
+                          checked={item.isBestseller}
+                          onChange={(value) =>
+                            onUpdateItem(item.id, "isBestseller", value)
+                          }
+                        />
+                      </div>
+
+                      {item.customizationOptions.length > 0 && (
+                        <fieldset className="mt-4">
+                          <legend className="text-sm font-semibold text-stone-900">
+                            Customizations
+                          </legend>
+                          <div className="mt-3 space-y-2">
+                            {item.customizationOptions.map((option) => (
+                              <div
+                                key={option.id}
+                                className="grid grid-cols-[1fr_120px] gap-2"
+                              >
+                                <TextField
+                                  label="Name"
+                                  value={option.name}
+                                  onChange={(value) =>
+                                    onUpdateCustomization(
+                                      item.id,
+                                      option.id,
+                                      "name",
+                                      value,
+                                    )
+                                  }
+                                />
+                                <TextField
+                                  label="Price"
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={option.price}
+                                  onChange={(value) =>
+                                    onUpdateCustomization(
+                                      item.id,
+                                      option.id,
+                                      "price",
+                                      value,
+                                    )
+                                  }
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </fieldset>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </aside>
+    </div>
   );
 }
 
@@ -120,9 +577,11 @@ export default function AdminDashboard() {
     createMenuItem,
     deleteCategory,
     deleteMenuItem,
+    importMenuItems,
     menuItems,
     updateMenuItem,
   } = useMenu();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItemDraft);
@@ -131,6 +590,10 @@ export default function AdminDashboard() {
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
+  const [importFileName, setImportFileName] = useState("");
+  const [importError, setImportError] = useState("");
+  const [importedItems, setImportedItems] = useState<ImportedItemDraft[]>([]);
 
   const groupedItems = useMemo(
     () =>
@@ -161,6 +624,11 @@ export default function AdminDashboard() {
     setError("");
     setCategoryDraft("");
     setEditorMode("category");
+  }
+
+  function openMenuUpload() {
+    closeEditor();
+    fileInputRef.current?.click();
   }
 
   function closeEditor() {
@@ -278,6 +746,169 @@ export default function AdminDashboard() {
     closeEditor();
   }
 
+  function updateImportedItem<K extends keyof ItemDraft>(
+    id: string,
+    field: K,
+    value: ItemDraft[K],
+  ) {
+    setImportedItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              [field]: value,
+              reviewFields: item.reviewFields.filter((entry) => entry !== labelForField(field)),
+            }
+          : item,
+      ),
+    );
+  }
+
+  function updateImportedCustomization(
+    itemId: string,
+    optionId: string,
+    field: "name" | "price",
+    value: string,
+  ) {
+    setImportedItems((current) =>
+      current.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              customizationOptions: item.customizationOptions.map((option) =>
+                option.id === optionId ? { ...option, [field]: value } : option,
+              ),
+            }
+          : item,
+      ),
+    );
+  }
+
+  async function handleMenuFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setImportFileName(file.name);
+    setImportedItems([]);
+    setImportError("");
+    setImportStatus("selected");
+
+    try {
+      setImportStatus("preparing");
+      const images = await fileToMenuImages(file);
+
+      if (images.some((image) => image.length > MAX_IMPORT_IMAGE_SIZE)) {
+        throw new Error("One or more menu pages are still over 1.5 MB after compression.");
+      }
+
+      setImportStatus("parsing");
+      const response = await fetch("/api/admin/menu-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.message || "This menu could not be parsed.");
+      }
+
+      const parsedItems = Array.isArray(result?.items)
+        ? (result.items as ParsedImportItem[])
+        : [];
+
+      if (parsedItems.length === 0) {
+        throw new Error("No menu items were found in that upload.");
+      }
+
+      setImportedItems(parsedItems.map(importedDraftFromParsed));
+      setImportStatus("review");
+      toast.success("Menu parsed", {
+        description: `Review ${parsedItems.length} ${
+          parsedItems.length === 1 ? "item" : "items"
+        } before importing.`,
+      });
+    } catch (caughtError) {
+      setImportError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "This menu could not be imported.",
+      );
+      setImportStatus("error");
+    }
+  }
+
+  function toggleImportedItem(id: string, selected: boolean) {
+    setImportedItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, selected } : item)),
+    );
+  }
+
+  function removeImportedItem(id: string) {
+    setImportedItems((current) => current.filter((item) => item.id !== id));
+  }
+
+  function closeImportPanel() {
+    setImportStatus("idle");
+    setImportFileName("");
+    setImportError("");
+    setImportedItems([]);
+  }
+
+  function importReviewedItems() {
+    const selectedItems = importedItems.filter((item) => item.selected);
+    const invalidItems = selectedItems.filter((item) => !isImportDraftValid(item));
+
+    if (selectedItems.length === 0) {
+      setImportError("Select at least one parsed item to import.");
+      return;
+    }
+
+    if (invalidItems.length > 0) {
+      setImportError("Complete name, price, category, image, and description for selected items.");
+      return;
+    }
+
+    setImportStatus("importing");
+    const result = importMenuItems(
+      selectedItems.map((item) => ({
+        name: item.name.trim(),
+        description: item.description.trim(),
+        imageUrl: item.imageUrl.trim(),
+        price: Number(item.price),
+        category: item.category.trim(),
+        isVegetarian: item.isVegetarian,
+        isBestseller: item.isBestseller,
+        customizationOptions: item.customizationOptions
+          .map((option) => ({
+            id: option.id,
+            name: option.name.trim(),
+            price: Number(option.price),
+          }))
+          .filter(
+            (option) =>
+              option.name.length > 0 &&
+              Number.isFinite(option.price) &&
+              option.price > 0,
+          ),
+      })),
+    );
+
+    toast.success("Menu items imported", {
+      description: `${result.itemCount} ${
+        result.itemCount === 1 ? "item" : "items"
+      } added${
+        result.categoryCount > 0
+          ? ` with ${result.categoryCount} new ${
+              result.categoryCount === 1 ? "category" : "categories"
+            }`
+          : ""
+      }.`,
+    });
+    closeImportPanel();
+  }
+
   return (
     <main className="min-h-screen bg-stone-100 font-inter text-stone-950">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-4 py-4 lg:hidden">
@@ -308,7 +939,11 @@ export default function AdminDashboard() {
           <PrimarySidebar activePage="menu" />
         </div>
         <div className="hidden lg:block">
-          <OptionsSidebar onAddItem={openNewItem} onAddCategory={openNewCategory} />
+          <OptionsSidebar
+            onAddItem={openNewItem}
+            onAddCategory={openNewCategory}
+            onUploadMenu={openMenuUpload}
+          />
         </div>
 
         <section className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
@@ -407,6 +1042,14 @@ export default function AdminDashboard() {
         </section>
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,application/pdf"
+        className="hidden"
+        onChange={handleMenuFileChange}
+      />
+
       {mobilePanel && (
         <div className="fixed inset-0 z-40 bg-stone-950/40 lg:hidden" onClick={() => setMobilePanel(null)}>
           <div
@@ -432,11 +1075,28 @@ export default function AdminDashboard() {
               <OptionsSidebar
                 onAddItem={openNewItem}
                 onAddCategory={openNewCategory}
+                onUploadMenu={openMenuUpload}
                 onNavigate={() => setMobilePanel(null)}
               />
             )}
           </div>
         </div>
+      )}
+
+      {importStatus !== "idle" && (
+        <ImportPanel
+          fileName={importFileName}
+          status={importStatus}
+          error={importError}
+          importedItems={importedItems}
+          onClose={closeImportPanel}
+          onRetry={openMenuUpload}
+          onImport={importReviewedItems}
+          onToggleItem={toggleImportedItem}
+          onRemoveItem={removeImportedItem}
+          onUpdateItem={updateImportedItem}
+          onUpdateCustomization={updateImportedCustomization}
+        />
       )}
 
       {editorMode && (

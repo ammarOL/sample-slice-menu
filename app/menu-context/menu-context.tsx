@@ -24,6 +24,7 @@ type MenuContextValue = {
   categories: string[];
   hydrated: boolean;
   createMenuItem: (item: NewMenuItem) => void;
+  importMenuItems: (items: NewMenuItem[]) => { itemCount: number; categoryCount: number };
   updateMenuItem: (item: MenuItem) => void;
   deleteMenuItem: (id: string) => void;
   createCategory: (name: string) => void;
@@ -102,6 +103,32 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     ]);
   }, []);
 
+  const importMenuItems = useCallback((items: NewMenuItem[]) => {
+    if (items.length === 0) return { itemCount: 0, categoryCount: 0 };
+
+    const normalizedItems = items.map((item) => ({
+      ...item,
+      id: createStableId("menu"),
+      imageUrl: normalizeMenuImageUrl(item.imageUrl),
+    }));
+    const importedCategories = Array.from(
+      new Set(normalizedItems.map((item) => item.category).filter(Boolean)),
+    );
+    const existingCategories = new Set(
+      categories.map((category) => category.toLowerCase()),
+    );
+    const newCategories = importedCategories.filter(
+      (category) => !existingCategories.has(category.toLowerCase()),
+    );
+
+    setMenuItems((current) => [...current, ...normalizedItems]);
+    if (newCategories.length > 0) {
+      setCategories((current) => [...current, ...newCategories]);
+    }
+
+    return { itemCount: normalizedItems.length, categoryCount: newCategories.length };
+  }, [categories]);
+
   const updateMenuItem = useCallback((item: MenuItem) => {
     setMenuItems((current) =>
       current.map((existing) =>
@@ -132,6 +159,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       categories,
       hydrated,
       createMenuItem,
+      importMenuItems,
       deleteMenuItem,
       deleteCategory,
       updateMenuItem,
@@ -141,6 +169,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       categories,
       createCategory,
       createMenuItem,
+      importMenuItems,
       deleteCategory,
       deleteMenuItem,
       hydrated,
