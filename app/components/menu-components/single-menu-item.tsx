@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { CustomizationOption } from "../../order-context/order-context";
+import { motion } from "motion/react";
 
 export default function SingleMenuItem({
   itemId,
@@ -72,84 +73,84 @@ export default function SingleMenuItem({
   return (
     <>
       <article className="flex gap-4 border-b border-stone-200 px-4 py-4 last:border-b-0 sm:px-6">
-      <div className="min-w-0 flex-1">
-        <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-stone-950">
-          <span
-            aria-label={isVegetarian ? "Vegetarian" : "Non-vegetarian"}
-            className={`grid size-4 shrink-0 place-items-center rounded-[3px] border-2 ${
-              isVegetarian ? "border-emerald-700" : "border-red-700"
-            }`}
-          >
+        <div className="min-w-0 flex-1">
+          <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-stone-950">
             <span
-              aria-hidden="true"
-              className={`size-1.5 rounded-full ${
-                isVegetarian ? "bg-emerald-700" : "bg-red-700"
+              aria-label={isVegetarian ? "Vegetarian" : "Non-vegetarian"}
+              className={`grid size-4 shrink-0 place-items-center rounded-[3px] border-2 ${
+                isVegetarian ? "border-emerald-700" : "border-red-700"
               }`}
-            />
-          </span>
-          {itemName}
-          {isBestseller && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
-              <span aria-hidden="true">★</span>
-              Bestseller
+            >
+              <span
+                aria-hidden="true"
+                className={`size-1.5 rounded-full ${
+                  isVegetarian ? "bg-emerald-700" : "bg-red-700"
+                }`}
+              />
             </span>
-          )}
-        </h2>
-        <p className="mt-1 text-sm leading-5 text-stone-700">
-          {itemDescription}
-        </p>
-        <p className="mt-2 text-sm font-semibold text-stone-950">
-          ₹{itemPrice}
-        </p>
-      </div>
-
-      <div className="w-24 shrink-0">
-        <div className="relative aspect-square overflow-hidden rounded-md bg-stone-100">
-          <Image
-            src={imageUrl}
-            alt={itemName}
-            fill
-            sizes="96px"
-            className="object-cover"
-          />
+            {itemName}
+            {isBestseller && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+                <span aria-hidden="true">★</span>
+                Bestseller
+              </span>
+            )}
+          </h2>
+          <p className="mt-1 text-sm leading-5 text-stone-700">
+            {itemDescription}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-stone-950">
+            ₹{itemPrice}
+          </p>
         </div>
-        <div className="mt-2 min-w-24 rounded-md border border-stone-300 bg-white text-center text-sm font-semibold">
-          {quantity > 0 ? (
-            <div className="grid grid-cols-3 items-center">
-              <button
-                type="button"
-                onClick={() => removeItem(itemId)}
-                className="h-9 cursor-pointer rounded-l-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-                aria-label={`Remove one ${itemName}`}
-              >
-                -
-              </button>
-              <span className="tabular-nums text-stone-950">{quantity}</span>
+
+        <div className="w-24 shrink-0">
+          <div className="relative aspect-square overflow-hidden rounded-md bg-stone-100">
+            <Image
+              src={imageUrl}
+              alt={itemName}
+              fill
+              sizes="96px"
+              className="object-cover"
+            />
+          </div>
+          <div className="mt-2 min-w-24 rounded-md border border-stone-300 bg-white text-center text-sm font-semibold">
+            {quantity > 0 ? (
+              <div className="grid grid-cols-3 items-center">
+                <button
+                  type="button"
+                  onClick={() => removeItem(itemId)}
+                  className="h-9 cursor-pointer rounded-l-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                  aria-label={`Remove one ${itemName}`}
+                >
+                  -
+                </button>
+                <span className="tabular-nums text-stone-950">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={openAddFlow}
+                  className="h-9 cursor-pointer rounded-r-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
+                  aria-label={`Add one ${itemName}`}
+                >
+                  +
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
                 onClick={openAddFlow}
-                className="h-9 cursor-pointer rounded-r-md text-lg leading-none text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-                aria-label={`Add one ${itemName}`}
+                className="h-9 w-full cursor-pointer rounded-md px-4 text-stone-950 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
               >
-                +
+                Add
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={openAddFlow}
-              className="h-9 w-full cursor-pointer rounded-md px-4 text-stone-950 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:ring-offset-2"
-            >
-              Add
-            </button>
+            )}
+          </div>
+          {isCustomizable && (
+            <p className="mt-1 text-center text-[11px] font-medium text-stone-500">
+              Customizable
+            </p>
           )}
         </div>
-        {isCustomizable && (
-          <p className="mt-1 text-center text-[11px] font-medium text-stone-500">
-            Customizable
-          </p>
-        )}
-      </div>
       </article>
 
       {customizationMode && (
@@ -239,7 +240,7 @@ export default function SingleMenuItem({
                   <button
                     type="button"
                     onClick={() => setCustomizationMode(null)}
-                      className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
+                    className="cursor-pointer rounded-md px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2"
                   >
                     Cancel
                   </button>
