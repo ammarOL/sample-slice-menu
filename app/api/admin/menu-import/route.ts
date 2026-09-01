@@ -1,10 +1,15 @@
 import { hasAdminSession } from "../../../lib/admin-auth";
+import { inflateRawSync } from "node:zlib";
 
 const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_VISION_MODEL = "qwen/qwen3.6-27b";
 const MAX_IMAGES = 5;
 const MAX_DATA_URL_LENGTH = 1536 * 1024;
+const MAX_DOCX_BYTES = 8 * 1024 * 1024;
+const MAX_DOCUMENT_TEXT_LENGTH = 24000;
 const ALLOWED_IMAGE_DATA_URL = /^data:image\/(jpeg|jpg|png|webp);base64,[a-z0-9+/=]+$/i;
+const ALLOWED_DOCX_DATA_URL =
+  /^data:application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document;base64,[a-z0-9+/=]+$/i;
 
 type GroqMessageContent = {
   type: "text" | "image_url";
@@ -30,6 +35,14 @@ type ParsedMenuItem = {
   customizationOptions?: unknown;
 };
 
+type ZipEntry = {
+  name: string;
+  compressedSize: number;
+  uncompressedSize: number;
+  compressionMethod: number;
+  localHeaderOffset: number;
+};
+
 function jsonError(message: string, status: number) {
   return Response.json({ message }, { status });
 }
@@ -49,6 +62,165 @@ function asPositiveNumber(value: unknown) {
 
 function asBoolean(value: unknown) {
   return typeof value === "boolean" ? value : false;
+}
+
+function decodeXmlEntities(value: string) {
+  return value.replace(/&(?:#(\d+)|#x([a-f0-9]+)|amp|lt|gt|quot|apos);/gi, (entity, decimal, hex) => {
+    if (decimal) return String.fromCodePoint(Number(decimal));
+    if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+
+    switch (entity.toLowerCase()) {
+      case "&amp;":
+        return "&";
+      case "&lt;":
+        return "<";
+      case "&gt;":
+        return ">";
+      case "&quot;":
+        return '"';
+      case "&apos;":
+        return "'";
+      default:
+        return entity;
+    }
+  });
+}
+
+function getZipEntries(buffer: Buffer) {
+  const eocdSignature = 0x06054b50;
+  const centralDirectorySignature = 0x02014b50;
+  const minEocdOffset = Math.max(0, buffer.length - 65557);
+  let eocdOffset = -1;
+
+  for (let index = buffer.length - 22; index >= minEocdOffset; index -= 1) {
+    if (buffer.readUInt32LE(index) === eocdSignature) {
+      eocdOffset = index;
+      break;
+    }
+  }
+
+  if (eocdOffset === -1) {
+    throw new Error("This DOCX file could not be opened.");
+  }
+
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+  const entries: ZipEntry[] = [];
+  let offset = centralDirectoryOffset;
+
+  for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+    if (offset + 46 > buffer.length || buffer.readUInt32LE(offset) !== centralDirectorySignature) {
+      throw new Error("This DOCX file has an unreadable ZIP directory.");
+    }
+
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const uncompressedSize = buffer.readUInt32LE(offset + 24);
+    const fileNameLength = buffer.readUInt16LE(offset + 28);
+    const extraFieldLength = buffer.readUInt16LE(offset + 30);
+    const fileCommentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const nameStart = offset + 46;
+    const nameEnd = nameStart + fileNameLength;
+
+    entries.push({
+      name: buffer.toString("utf8", nameStart, nameEnd),
+      compressedSize,
+      uncompressedSize,
+      compressionMethod,
+      localHeaderOffset,
+    });
+
+    offset = nameEnd + extraFieldLength + fileCommentLength;
+  }
+
+  return entries;
+}
+
+function readZipEntry(buffer: Buffer, entry: ZipEntry) {
+  const localHeaderSignature = 0x04034b50;
+  const offset = entry.localHeaderOffset;
+
+  if (offset + 30 > buffer.length || buffer.readUInt32LE(offset) !== localHeaderSignature) {
+    throw new Error("This DOCX file has an unreadable document entry.");
+  }
+
+  const fileNameLength = buffer.readUInt16LE(offset + 26);
+  const extraFieldLength = buffer.readUInt16LE(offset + 28);
+  const dataStart = offset + 30 + fileNameLength + extraFieldLength;
+  const dataEnd = dataStart + entry.compressedSize;
+
+  if (dataEnd > buffer.length) {
+    throw new Error("This DOCX file ended before the document text could be read.");
+  }
+
+  const compressed = buffer.subarray(dataStart, dataEnd);
+
+  if (entry.compressionMethod === 0) return compressed;
+  if (entry.compressionMethod === 8) {
+    const inflated = inflateRawSync(compressed);
+
+    if (inflated.length !== entry.uncompressedSize) {
+      throw new Error("This DOCX file contains unexpected document data.");
+    }
+
+    return inflated;
+  }
+
+  throw new Error("This DOCX file uses an unsupported ZIP compression method.");
+}
+
+function extractWordTextFromXml(xml: string) {
+  const output: string[] = [];
+  const tokenPattern =
+    /<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:tab\b[^>]*\/>|<w:br\b[^>]*\/>|<\/w:p>|<\/w:tc>|<\/w:tr>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenPattern.exec(xml)) !== null) {
+    const token = match[0];
+
+    if (match[1] !== undefined) {
+      output.push(decodeXmlEntities(match[1]));
+    } else if (token.startsWith("<w:tab") || token === "</w:tc>") {
+      output.push("\t");
+    } else if (token.startsWith("<w:br") || token === "</w:p>" || token === "</w:tr>") {
+      output.push("\n");
+    }
+  }
+
+  return output
+    .join("")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function extractDocxText(dataUrl: string) {
+  if (!ALLOWED_DOCX_DATA_URL.test(dataUrl)) {
+    throw new Error("Uploaded DOCX files must be valid Word documents under 8 MB.");
+  }
+
+  const base64 = dataUrl.split(",", 2)[1];
+  const buffer = Buffer.from(base64, "base64");
+
+  if (buffer.length === 0 || buffer.length > MAX_DOCX_BYTES) {
+    throw new Error("Upload a DOCX file under 8 MB.");
+  }
+
+  const documentEntry = getZipEntries(buffer).find((entry) => entry.name === "word/document.xml");
+
+  if (!documentEntry) {
+    throw new Error("This DOCX file does not contain a readable Word document.");
+  }
+
+  const documentXml = readZipEntry(buffer, documentEntry).toString("utf8");
+  const text = extractWordTextFromXml(documentXml);
+
+  if (text.length === 0) {
+    throw new Error("No menu text was found in that DOCX file.");
+  }
+
+  return text.slice(0, MAX_DOCUMENT_TEXT_LENGTH);
 }
 
 function normalizeParsedItems(value: unknown) {
@@ -113,16 +285,21 @@ export async function POST(request: Request) {
     body && typeof body === "object" && "images" in body
       ? (body as { images: unknown }).images
       : null;
+  const document =
+    body && typeof body === "object" && "document" in body
+      ? (body as { document: unknown }).document
+      : null;
 
-  if (!Array.isArray(images) || images.length === 0) {
-    return jsonError("Upload at least one menu image.", 400);
+  if ((!Array.isArray(images) || images.length === 0) && typeof document !== "string") {
+    return jsonError("Upload at least one menu image, PDF page, or DOCX file.", 400);
   }
 
-  if (images.length > MAX_IMAGES) {
+  if (Array.isArray(images) && images.length > MAX_IMAGES) {
     return jsonError(`Upload no more than ${MAX_IMAGES} images or PDF pages.`, 400);
   }
 
   if (
+    Array.isArray(images) &&
     images.some(
       (image) =>
         typeof image !== "string" ||
@@ -133,18 +310,35 @@ export async function POST(request: Request) {
     return jsonError("Uploaded menu pages must be JPEG, PNG, or WebP images under 4 MB each.", 400);
   }
 
+  let documentText = "";
+  if (typeof document === "string") {
+    try {
+      documentText = extractDocxText(document);
+    } catch (caughtError) {
+      return jsonError(
+        caughtError instanceof Error ? caughtError.message : "This DOCX file could not be read.",
+        400,
+      );
+    }
+  }
+
   const content: GroqMessageContent[] = [
     {
       type: "text",
       text:
         "Extract menu items. Return only JSON: " +
         '{"items":[{"name":"","description":"","price":0,"category":"","isVegetarian":false,"isBestseller":false,"imageUrl":"","customizationOptions":[{"name":"","price":0}]}]}. ' +
-        "Use numeric prices, infer category headings, use empty strings/false when unknown.",
+        "Use numeric prices, infer category headings, use empty strings/false when unknown." +
+        (documentText
+          ? `\n\nMenu document text:\n${documentText}`
+          : ""),
     },
-    ...images.map((url) => ({
-      type: "image_url" as const,
-      image_url: { url },
-    })),
+    ...(Array.isArray(images)
+      ? images.map((url) => ({
+          type: "image_url" as const,
+          image_url: { url },
+        }))
+      : []),
   ];
 
   const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {

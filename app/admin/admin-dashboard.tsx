@@ -56,6 +56,7 @@ type ParsedImportItem = {
 
 const MAX_IMPORT_PAGES = 5;
 const MAX_IMPORT_IMAGE_SIZE = 1536 * 1024;
+const MAX_IMPORT_DOCX_SIZE = 8 * 1024 * 1024;
 const DEFAULT_IMPORT_IMAGE_URL =
   "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=320&q=80";
 
@@ -230,7 +231,34 @@ async function fileToMenuImages(file: File) {
   if (file.type === "application/pdf") return pdfFileToDataUrls(file);
   if (file.type.startsWith("image/")) return [await imageFileToDataUrl(file)];
 
-  throw new Error("Upload a PDF or image file.");
+  throw new Error("Upload a PDF, DOCX, or image file.");
+}
+
+function isDocxFile(file: File) {
+  return (
+    file.type ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    file.name.toLowerCase().endsWith(".docx")
+  );
+}
+
+async function docxFileToDataUrl(file: File) {
+  if (file.size > MAX_IMPORT_DOCX_SIZE) {
+    throw new Error("Upload a DOCX file under 8 MB.");
+  }
+
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+
+  return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${btoa(
+    binary,
+  )}`;
 }
 
 function importedDraftFromParsed(item: ParsedImportItem): ImportedItemDraft {
@@ -796,9 +824,14 @@ export default function AdminDashboard() {
 
     try {
       setImportStatus("preparing");
-      const images = await fileToMenuImages(file);
+      const payload: { document: string } | { images: string[] } = isDocxFile(file)
+        ? { document: await docxFileToDataUrl(file) }
+        : { images: await fileToMenuImages(file) };
 
-      if (images.some((image) => image.length > MAX_IMPORT_IMAGE_SIZE)) {
+      if (
+        "images" in payload &&
+        payload.images.some((image) => image.length > MAX_IMPORT_IMAGE_SIZE)
+      ) {
         throw new Error("One or more menu pages are still over 1.5 MB after compression.");
       }
 
@@ -806,7 +839,7 @@ export default function AdminDashboard() {
       const response = await fetch("/api/admin/menu-import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images }),
+        body: JSON.stringify(payload),
       });
       const result = await response.json();
 
@@ -1045,7 +1078,7 @@ export default function AdminDashboard() {
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,application/pdf"
+        accept="image/png,image/jpeg,image/webp,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         className="hidden"
         onChange={handleMenuFileChange}
       />
