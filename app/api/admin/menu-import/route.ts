@@ -64,6 +64,65 @@ function asBoolean(value: unknown) {
   return typeof value === "boolean" ? value : false;
 }
 
+function extractJsonObject(value: string) {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    return trimmed;
+  }
+
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch?.[1]) {
+    return extractJsonObject(fencedMatch[1]);
+  }
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+
+  if (start !== -1 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+
+  return trimmed;
+}
+
+async function parseGroqResponse(response: Response) {
+  const completion = await response.json();
+  const rawContent = completion?.choices?.[0]?.message?.content;
+
+  if (typeof rawContent !== "string") {
+    throw new Error("Groq returned an empty menu parse result.");
+  }
+
+  return JSON.parse(extractJsonObject(rawContent));
+}
+
+async function requestGroqMenuParse({
+  apiKey,
+  content,
+  strictJson,
+}: {
+  apiKey: string;
+  content: GroqMessageContent[];
+  strictJson: boolean;
+}) {
+  return fetch(GROQ_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_VISION_MODEL,
+      messages: [{ role: "user", content }],
+      ...(strictJson ? { response_format: { type: "json_object" } } : {}),
+      temperature: 0,
+      max_completion_tokens: 2048,
+      stream: false,
+    }),
+  });
+}
+
 function decodeXmlEntities(value: string) {
   return value.replace(/&(?:#(\d+)|#x([a-f0-9]+)|amp|lt|gt|quot|apos);/gi, (entity, decimal, hex) => {
     if (decimal) return String.fromCodePoint(Number(decimal));
@@ -326,7 +385,7 @@ export async function POST(request: Request) {
     {
       type: "text",
       text:
-        "Extract menu items. Return only JSON: " +
+        "Extract menu items. Return a single valid JSON object and no other text: " +
         '{"items":[{"name":"","description":"","price":0,"category":"","isVegetarian":false,"isBestseller":false,"imageUrl":"","customizationOptions":[{"name":"","price":0}]}]}. ' +
         "Use numeric prices, infer category headings, use empty strings/false when unknown." +
         (documentText
@@ -341,40 +400,38 @@ export async function POST(request: Request) {
       : []),
   ];
 
-  const response = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: GROQ_VISION_MODEL,
-      messages: [{ role: "user", content }],
-      response_format: { type: "json_object" },
-      temperature: 0,
-      max_completion_tokens: 2048,
-      stream: false,
-    }),
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    return jsonError(
-      details || "Groq could not parse this menu. Try a clearer image or fewer pages.",
-      response.status,
-    );
-  }
-
-  const completion = await response.json();
-  const rawContent = completion?.choices?.[0]?.message?.content;
-
-  if (typeof rawContent !== "string") {
-    return jsonError("Groq returned an empty menu parse result.", 502);
-  }
-
   let parsed: unknown;
+  const response = await requestGroqMenuParse({ apiKey, content, strictJson: true });
+
   try {
-    parsed = JSON.parse(rawContent);
+    if (!response.ok) {
+      const details = await response.text();
+
+      if (!details.includes("json_validate_failed")) {
+        return jsonError(
+          details || "Groq could not parse this menu. Try a clearer image or fewer pages.",
+          response.status,
+        );
+      }
+
+      const fallbackResponse = await requestGroqMenuParse({
+        apiKey,
+        content,
+        strictJson: false,
+      });
+
+      if (!fallbackResponse.ok) {
+        const fallbackDetails = await fallbackResponse.text();
+        return jsonError(
+          fallbackDetails || "Groq could not parse this menu. Try a clearer image or fewer pages.",
+          fallbackResponse.status,
+        );
+      }
+
+      parsed = await parseGroqResponse(fallbackResponse);
+    } else {
+      parsed = await parseGroqResponse(response);
+    }
   } catch {
     return jsonError("Groq returned malformed JSON for this menu.", 502);
   }
