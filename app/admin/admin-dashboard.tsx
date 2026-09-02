@@ -292,6 +292,22 @@ function importedDraftFromParsed(item: ParsedImportItem): ImportedItemDraft {
   };
 }
 
+async function readMenuImportResponse(response: Response) {
+  const bodyText = await response.text();
+
+  if (!bodyText) return null;
+
+  try {
+    return JSON.parse(bodyText) as { message?: unknown; items?: unknown };
+  } catch {
+    if (!response.ok) {
+      return { message: bodyText };
+    }
+
+    throw new Error("Menu import returned an invalid JSON response.");
+  }
+}
+
 function labelForField(field: keyof ItemDraft) {
   if (field === "imageUrl") return "Image";
   return field.charAt(0).toUpperCase() + field.slice(1);
@@ -841,10 +857,14 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const result = await response.json();
+      const result = await readMenuImportResponse(response);
 
       if (!response.ok) {
-        throw new Error(result?.message || "This menu could not be parsed.");
+        throw new Error(
+          typeof result?.message === "string" && result.message.trim()
+            ? result.message
+            : "This menu could not be parsed.",
+        );
       }
 
       const parsedItems = Array.isArray(result?.items)
