@@ -86,15 +86,82 @@ function extractJsonObject(value: string) {
   return trimmed;
 }
 
+function withoutTrailingJsonCommas(value: string) {
+  return value.replace(/,\s*([}\]])/g, "$1");
+}
+
+function getJsonObjectCandidates(value: string) {
+  const candidates: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      inString = true;
+    } else if (character === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (character === "}" && depth > 0) {
+      depth -= 1;
+
+      if (depth === 0 && start !== -1) {
+        candidates.push(value.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+
+  return candidates;
+}
+
+function parseJsonObjectFromText(value: string) {
+  const extracted = extractJsonObject(value);
+  const candidates = getJsonObjectCandidates(extracted);
+  const jsonCandidates = candidates.length > 0 ? candidates : [extracted];
+  let lastError: unknown;
+
+  for (const candidate of jsonCandidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch (caughtError) {
+      lastError = caughtError;
+    }
+
+    try {
+      return JSON.parse(withoutTrailingJsonCommas(candidate));
+    } catch (caughtError) {
+      lastError = caughtError;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("No JSON object was found.");
+}
+
 async function parseGroqResponse(response: Response) {
-  const completion = await response.json();
+  const responseBody = await response.text();
+  const completion = parseJsonObjectFromText(responseBody);
   const rawContent = completion?.choices?.[0]?.message?.content;
 
   if (typeof rawContent !== "string") {
     throw new Error("Groq returned an empty menu parse result.");
   }
 
-  return JSON.parse(extractJsonObject(rawContent));
+  return parseJsonObjectFromText(rawContent);
 }
 
 async function requestGroqMenuParse({
